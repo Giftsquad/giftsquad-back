@@ -42,7 +42,8 @@ Créer un compte utilisateur.
   "token": "token_here",
   "firstname": "Marie",
   "lastname": "Dupont",
-  "nickname": "Marie"
+  "nickname": "Marie",
+  "email": "marie@example.com"
 }
 ```
 
@@ -67,7 +68,36 @@ Se connecter.
   "token": "token_here",
   "firstname": "Marie",
   "lastname": "Dupont",
-  "nickname": "Marie"
+  "nickname": "Marie",
+  "email": "marie@example.com"
+}
+```
+
+### PUT /user/update
+
+Modifier compte utilisateur.
+
+**Body :**
+
+```json
+{
+  "firstname": "Marie",
+  "lastname": "Dupont",
+  "nickname": "Marie",
+  "email": "marie@example.com"
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "_id": "user_id",
+  "token": "token_here",
+  "firstname": "Marie",
+  "lastname": "Dupont",
+  "nickname": "Marie",
+  "email": "marie@example.com"
 }
 ```
 
