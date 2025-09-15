@@ -2,21 +2,21 @@ const uid2 = require("uid2");
 const SHA256 = require("crypto-js/sha256");
 const encBase64 = require("crypto-js/enc-base64");
 const express = require("express");
-const router = express.Router();
 const User = require("../models/User");
+const {
+  userLoginValidators,
+  userSignupValidators,
+  userUpdateValidators,
+} = require("../validation/user");
+const { matchedData } = require("express-validator");
 const isAuthenticated = require("../middlewares/isAuthenticated");
+const router = express.Router();
 
 // SIGNUP
-router.post("/signup", async (req, res) => {
+router.post("/signup", userSignupValidators, async (req, res) => {
   try {
-    const { firstname, lastname, nickname, email, password } = req.body;
-    if (!firstname || !lastname || !nickname || !email || !password) {
-      return res.status(400).json({ message: "Missing parameters" });
-    }
-    const user = await User.findOne({ email });
-    if (user) {
-      return res.status(409).json({ message: "User already exists" });
-    }
+    const { email, firstname, lastname, nickname, password } = matchedData(req);
+
     const salt = uid2(64);
     const hash = SHA256(password + salt).toString(encBase64);
     const token = uid2(64);
@@ -31,40 +31,65 @@ router.post("/signup", async (req, res) => {
       salt,
     });
     await newUser.save();
-    return res.status(201).json({
-      _id: newUser._id,
-      token: newUser.token,
-      firstname: newUser.firstname,
-      lastname: newUser.lastname,
-      nickname: newUser.nickname,
-    });
+
+    return res.status(201).json(getShowableUser(newUser));
   } catch (error) {
     return res.status(500).json({ message: error });
   }
 });
 
 // LOGIN
-router.post("/login", async (req, res) => {
+router.post("/login", userLoginValidators, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = matchedData(req);
+
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Unauthorized" }); // flou
+      return res.status(401).json({ message: "Unauthorized" });
     }
+
     const newHash = SHA256(password + user.salt).toString(encBase64);
     if (newHash !== user.hash) {
-      return res.status(401).json({ message: "Unauthorized" }); // flou
+      return res.status(401).json({ message: "Unauthorized" });
     }
-    return res.status(200).json({
-      _id: user._id,
-      token: user.token,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      nickname: user.nickname,
-    });
+
+    return res.status(200).json(getShowableUser(user));
   } catch (error) {
     return res.status(500).json({ message: error });
   }
 });
 
+// UPDATE
+router.put(
+  "/update",
+  isAuthenticated,
+  userUpdateValidators,
+  async (req, res) => {
+    try {
+      const { email, firstname, lastname, nickname } = matchedData(req);
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        { email, firstname, lastname, nickname },
+        {
+          new: true,
+        }
+      );
+      return res.status(200).json(getShowableUser(updatedUser));
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
+  }
+);
+
 module.exports = router;
+
+const getShowableUser = (user) => {
+  return {
+    _id: user._id,
+    token: user.token,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    nickname: user.nickname,
+    email: user.email,
+  };
+};
