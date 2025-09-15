@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema({
     required: true,
     minLength: 2,
     maxLength: 30,
-    unique: true,
     trim: true,
   },
   lastname: {
@@ -25,6 +24,7 @@ const userSchema = new mongoose.Schema({
   nickname: {
     type: String,
     required: true,
+    unique: true,
     minLength: 2,
     maxLength: 30,
     trim: true,
