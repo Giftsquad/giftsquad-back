@@ -63,8 +63,7 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 //Delete Event
-router.delete("/event/:id", async (req, res) => {
-  //isAuthenticated, isAdmin,
+router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const deletedEvent = await Event.findByIdAndDelete(req.params.id);
     if (!deletedEvent)
