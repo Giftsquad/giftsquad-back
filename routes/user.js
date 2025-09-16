@@ -112,5 +112,6 @@ const getShowableUser = (user) => {
     lastname: user.lastname,
     nickname: user.nickname,
     email: user.email,
+    events: user.events,
   };
 };

@@ -3,7 +3,6 @@ const router = express.Router();
 const Event = require("../models/Event");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
-const User = require("../models/User");
 
 // Create event
 router.post("/event/publish", isAuthenticated, async (req, res) => {
