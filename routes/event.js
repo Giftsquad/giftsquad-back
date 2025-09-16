@@ -6,7 +6,7 @@ const isAdmin = require("../middlewares/isAdmin");
 const User = require("../models/User");
 
 // Create event
-router.post("/event/publish", isAuthenticated, async (req, res) => {
+router.post("/publish", isAuthenticated, async (req, res) => {
   try {
     const newEvent = new Event({
       event_type: req.body.type,
@@ -24,7 +24,7 @@ router.post("/event/publish", isAuthenticated, async (req, res) => {
 });
 
 //Read All Event
-router.get("/event", isAuthenticated, async (req, res) => {
+router.get("/", isAuthenticated, async (req, res) => {
   try {
     const events = await Event.find().populate("event_organizer");
     res.status(200).json(events);
@@ -34,7 +34,7 @@ router.get("/event", isAuthenticated, async (req, res) => {
 });
 
 //Read specific Event
-router.get("/event/:id", isAuthenticated, async (req, res) => {
+router.get("/:id", isAuthenticated, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate(
       "event_organizer"
@@ -47,7 +47,7 @@ router.get("/event/:id", isAuthenticated, async (req, res) => {
 });
 
 //Update Event //add participants
-router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.put("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
@@ -63,7 +63,7 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 //Delete Event
-router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const deletedEvent = await Event.findByIdAndDelete(req.params.id);
     if (!deletedEvent)

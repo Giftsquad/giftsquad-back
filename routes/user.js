@@ -14,8 +14,9 @@ const router = express.Router();
 
 // SIGNUP
 router.post("/signup", userSignupValidators, async (req, res) => {
+  console.log("📩 Requête reçue:", req.body);
   try {
-    const { email, firstname, lastname, nickname, password } = matchedData(req);
+    const { email, firstname, lastname, nickname, password } = req.body;
 
     const salt = uid2(64);
     const hash = SHA256(password + salt).toString(encBase64);
