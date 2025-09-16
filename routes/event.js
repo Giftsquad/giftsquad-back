@@ -9,7 +9,7 @@ const {
   eventCreateValidators,
 } = require("../validation/Event");
 const { matchedData } = require("express-validator");
-const { sendInvitationEmail } = require("../utils/mailer");
+const { sendInvitationEmail } = require("../services/mailerService");
 
 // Create event
 router.post(
@@ -136,6 +136,39 @@ router.put(
     return res.status(200).json(event);
   }
 );
+
+// Accept/Decline invitation
+router.put("/:id/:action-invitation", isAuthenticated, async (req, res) => {
+  const { id, action } = req.params;
+  if (!["accept", "decline"].includes(action)) {
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  const event = await Event.findById(id);
+  if (!event) {
+    return res.status(404).json({ message: "Evènement introuvable" });
+  }
+
+  const participation = event.event_participants.find(
+    (eventParticipant) =>
+      eventParticipant.participant.email.toLowerCase() ===
+        req.user.email.toLowerCase() &&
+      Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
+  );
+  if (!participation) {
+    return res.status(404).json({ message: "Invitation introuvable" });
+  }
+
+  participation.participant.name = `${req.user.firstname} ${req.user.lastname}`;
+  participation.status =
+    "accept" === action
+      ? Event.PARTICIPANT_STATUSES.accepted
+      : Event.PARTICIPANT_STATUSES.declined;
+
+  await event.save();
+
+  return res.status(200).json(event);
+});
 
 //Delete Event
 router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
