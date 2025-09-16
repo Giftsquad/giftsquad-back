@@ -6,8 +6,7 @@ const isAdmin = require("../middlewares/isAdmin");
 const User = require("../models/User");
 
 // Create event
-router.post("/event/publish", async (req, res) => {
-  //isAuthenticated
+router.post("/event/publish", isAuthenticated, async (req, res) => {
   try {
     const newEvent = new Event({
       event_type: req.body.type,
