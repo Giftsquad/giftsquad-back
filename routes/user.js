@@ -53,6 +53,7 @@ router.post("/login", userLoginValidators, async (req, res) => {
   try {
     const { email, password } = matchedData(req);
 
+    // Login normal avec email et password
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -64,6 +65,23 @@ router.post("/login", userLoginValidators, async (req, res) => {
     }
 
     return res.status(200).json(getShowableUser(user));
+  } catch (error) {
+    return res.status(500).json({ message: error });
+  }
+});
+
+// VALIDATE TOKEN
+router.post("/validate", async (req, res) => {
+  try {
+    // Vérifier si on a un token dans le header
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (token) {
+      const user = await User.findOne({ token });
+      if (user) {
+        return res.status(200).json(getShowableUser(user));
+      }
+    }
+    return res.status(401).json({ message: "Unauthorized" });
   } catch (error) {
     return res.status(500).json({ message: error });
   }
@@ -112,5 +130,6 @@ const getShowableUser = (user) => {
     lastname: user.lastname,
     nickname: user.nickname,
     email: user.email,
+    events: user.events,
   };
 };
