@@ -4,24 +4,52 @@ const Event = require("../models/Event");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
 const User = require("../models/User");
+const {
+  eventAddParticipantValidators,
+  eventCreateValidators,
+} = require("../validation/Event");
+const { matchedData } = require("express-validator");
+const { sendInvitationEmail } = require("../utils/mailer");
 
 // Create event
-router.post("/event/publish", isAuthenticated, async (req, res) => {
-  try {
-    const newEvent = new Event({
-      event_type: req.body.type,
-      event_name: req.body.name,
-      event_date: req.body.date,
-      event_budget: req.body.budget,
-      event_organizer: req.user._id,
-      event_participants: req.body.participants || [],
-    });
-    await newEvent.save();
-    res.status(201).json(newEvent);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+router.post(
+  "/publish",
+  isAuthenticated,
+  eventCreateValidators,
+  async (req, res) => {
+    try {
+      const { type, name, date, budget = null } = matchedData(req);
+
+      const newEvent = new Event({
+        event_type: type,
+        event_name: name,
+        event_date: date,
+        event_budget: budget,
+        event_organizer: req.user,
+        event_participants: [
+          {
+            participant: {
+              name: `${req.user.firstname} ${req.user.lastname}`,
+              email: req.user.email,
+            },
+            role: Event.PARTICIPANT_ROLES.organizer,
+            status: Event.PARTICIPANT_STATUSES.accepted,
+            joinedAt: new Date(),
+          },
+        ],
+      });
+      await newEvent.save();
+
+      // Ajout de l'event aux events de l'utilisateur
+      req.user.events.push(newEvent._id);
+      await req.user.save();
+
+      res.status(201).json(newEvent);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   }
-});
+);
 
 //Read All Event
 router.get("/event", isAuthenticated, async (req, res) => {
@@ -46,7 +74,7 @@ router.get("/event/:id", isAuthenticated, async (req, res) => {
   }
 });
 
-//Update Event //add participants
+//Update Event
 router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -61,6 +89,53 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
+
+// Add participant
+router.put(
+  "/:id/add-participant",
+  isAuthenticated,
+  isAdmin,
+  eventAddParticipantValidators,
+  async (req, res) => {
+    const { email } = matchedData(req);
+
+    const event = req.event;
+
+    const alreadyParticipates = event.event_participants.some(
+      (eventParticipant) =>
+        eventParticipant.participant.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (alreadyParticipates) {
+      return res
+        .status(409)
+        .json({ message: "L'utilisateur participe déjà à cet évènement." });
+    }
+
+    const user = await User.findOne({ email });
+    event.event_participants.push({
+      participant: {
+        name: user ? `${user.firstname} ${user.lastname}` : null,
+        email,
+      },
+      role: Event.PARTICIPANT_ROLES.participant,
+      status: Event.PARTICIPANT_STATUSES.invited,
+      joinedAt: new Date(),
+    });
+
+    await event.save();
+
+    // Ajout de l'event aux events de l'utilisateur
+    if (user) {
+      user.events.push(event._id);
+      await user.save();
+    }
+
+    sendInvitationEmail(event, email, user);
+
+    return res.status(200).json(event);
+  }
+);
 
 //Delete Event
 router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
