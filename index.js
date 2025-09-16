@@ -1,8 +1,8 @@
+dotenv.config();
+const dotenv = require("dotenv");
 const express = require("express");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
-const dotenv = require("dotenv");
-dotenv.config();
 
 const app = express();
 app.use(express.json());
