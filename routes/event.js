@@ -14,7 +14,7 @@ router.post("/event/publish", async (req, res) => {
       event_name: req.body.name,
       event_date: req.body.date,
       event_budget: req.body.budget,
-      event_organizer: req.body.organizerId, //req.user._id j'ai modifié pour pouvoir faire mes test sur postman
+      event_organizer: req.user._id,
       event_participants: req.body.participants || [],
     });
     await newEvent.save();
@@ -25,8 +25,7 @@ router.post("/event/publish", async (req, res) => {
 });
 
 //Read All Event
-router.get("/event", async (req, res) => {
-  //isAuthenticated
+router.get("/event", isAuthenticated, async (req, res) => {
   try {
     const events = await Event.find().populate("event_organizer");
     res.status(200).json(events);
@@ -36,8 +35,7 @@ router.get("/event", async (req, res) => {
 });
 
 //Read specific Event
-router.get("/event/:id", async (req, res) => {
-  //isAuthenticated
+router.get("/event/:id", isAuthenticated, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate(
       "event_organizer"
@@ -50,8 +48,7 @@ router.get("/event/:id", async (req, res) => {
 });
 
 //Update Event //add participants
-router.put("/event/:id", async (req, res) => {
-  //isAuthenticated isAdmin
+router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const updatedEvent = await Event.findByIdAndUpdate(
       req.params.id,
