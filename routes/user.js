@@ -7,7 +7,7 @@ const {
   userLoginValidators,
   userSignupValidators,
   userUpdateValidators,
-} = require("../validation/user");
+} = require("../validation/User");
 const { matchedData } = require("express-validator");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const router = express.Router();
@@ -16,6 +16,16 @@ const router = express.Router();
 router.post("/signup", userSignupValidators, async (req, res) => {
   try {
     const { email, firstname, lastname, nickname, password } = matchedData(req);
+
+    const existingByEmail = await User.findOne({ email });
+    if (existingByEmail) {
+      return res.status(409).json({ message: "Cet email est déjà utilisé" });
+    }
+
+    const existingByNickname = await User.findOne({ nickname });
+    if (existingByNickname) {
+      return res.status(409).json({ message: "Ce pseudo est déjà utilisé" });
+    }
 
     const salt = uid2(64);
     const hash = SHA256(password + salt).toString(encBase64);
@@ -67,6 +77,17 @@ router.put(
   async (req, res) => {
     try {
       const { email, firstname, lastname, nickname } = matchedData(req);
+
+      const existingByEmail = await User.findOne({ email });
+      if (existingByEmail && !existingByEmail._id.equals(req.user._id)) {
+        return res.status(409).json({ message: "Cet email est déjà utilisé" });
+      }
+
+      const existingByNickname = await User.findOne({ nickname });
+      if (existingByNickname && !existingByNickname._id.equals(req.user._id)) {
+        return res.status(409).json({ message: "Ce pseudo est déjà utilisé" });
+      }
+
       const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         { email, firstname, lastname, nickname },
