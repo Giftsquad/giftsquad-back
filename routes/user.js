@@ -70,18 +70,17 @@ router.post("/login", userLoginValidators, async (req, res) => {
   }
 });
 
-// VALIDATE TOKEN
-router.post("/validate", async (req, res) => {
+// GET USER BY ID
+router.get("/:id", isAuthenticated, async (req, res) => {
   try {
-    // Vérifier si on a un token dans le header
-    const token = req.headers.authorization?.replace("Bearer ", "");
-    if (token) {
-      const user = await User.findOne({ token });
-      if (user) {
-        return res.status(200).json(getShowableUser(user));
-      }
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    return res.status(401).json({ message: "Unauthorized" });
+
+    return res.status(200).json(getShowableUser(user));
   } catch (error) {
     return res.status(500).json({ message: error });
   }
