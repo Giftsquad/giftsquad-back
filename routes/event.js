@@ -64,6 +64,24 @@ router.get("", isAuthenticated, async (req, res) => {
   }
 });
 
+// Read All Invitations for authenticated user
+router.get("/invitations", isAuthenticated, async (req, res) => {
+  try {
+    const events = await Event.find({
+      event_participants: {
+        $elemMatch: {
+          "participant.email": req.user.email,
+          status: Event.PARTICIPANT_STATUSES.invited,
+        },
+      },
+    });
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Read specific Event
 router.get("/:id", isAuthenticated, async (req, res) => {
   try {
