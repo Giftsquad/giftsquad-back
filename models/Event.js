@@ -35,7 +35,10 @@ const eventSchema = new mongoose.Schema({
     // Ajouter les infos des participants pour envoyer une invitation ou la notification sur l'app
     {
       participant: {
-        name: { type: String, trim: true },
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
         email: { type: String, required: true, trim: true },
       },
       // Définir le rôle pour définir les droits d'administrateurs afin de voir qui a pioché qui
@@ -67,6 +70,10 @@ const eventSchema = new mongoose.Schema({
       },
     },
   ],
+  // Date du tirage au sort pour le Secret Santa
+  drawnAt: {
+    type: Date,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
