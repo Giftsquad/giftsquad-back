@@ -7,9 +7,15 @@ const User = require("../models/User");
 const {
   eventAddParticipantValidators,
   eventCreateValidators,
+  eventParticipationValidators,
 } = require("../validation/Event");
 const { matchedData } = require("express-validator");
 const { sendInvitationEmail } = require("../services/mailerService");
+const { drawParticipants } = require("../services/drawService");
+const {
+  destroyFolder,
+  GIFT_LIST_FOLDER_PATTERN,
+} = require("../services/uploadService");
 
 // Create event
 router.post(
@@ -29,7 +35,7 @@ router.post(
         event_participants: [
           {
             participant: {
-              name: `${req.user.firstname} ${req.user.lastname}`,
+              user: req.user,
               email: req.user.email,
             },
             role: Event.PARTICIPANT_ROLES.organizer,
@@ -51,23 +57,49 @@ router.post(
   }
 );
 
-//Read All Event
-router.get("/event", isAuthenticated, async (req, res) => {
+// Read All Events for authenticated user
+router.get("", isAuthenticated, async (req, res) => {
   try {
-    const events = await Event.find().populate("event_organizer");
+    const events = await Event.find({
+      "event_participants.participant.email": req.user.email,
+    });
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-//Read specific Event
-router.get("/event/:id", isAuthenticated, async (req, res) => {
+// Read All Invitations for authenticated user
+router.get("/invitations", isAuthenticated, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id).populate(
-      "event_organizer"
-    );
-    if (!event) return res.status(404).json({ message: "Event not found" });
+    const events = await Event.find({
+      event_participants: {
+        $elemMatch: {
+          "participant.email": req.user.email,
+          status: Event.PARTICIPANT_STATUSES.invited,
+        },
+      },
+    });
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Read specific Event
+router.get("/:id", isAuthenticated, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate("event_organizer")
+      .populate("event_participants.participant.user")
+      .populate("event_participants.assignedTo")
+      .populate("event_participants.assignedBy");
+
+    if (!event) {
+      return res.status(404).json({ message: "Evènement introuvable" });
+    }
+
     res.status(200).json(event);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -91,89 +123,178 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Add participant
-router.put(
-  "/:id/add-participant",
+router.post(
+  "/:id/participant",
   isAuthenticated,
   isAdmin,
   eventAddParticipantValidators,
   async (req, res) => {
-    const { email } = matchedData(req);
+    try {
+      const { email } = matchedData(req);
 
-    const event = req.event;
+      const event = req.event;
 
-    const alreadyParticipates = event.event_participants.some(
-      (eventParticipant) =>
-        eventParticipant.participant.email.toLowerCase() === email.toLowerCase()
-    );
+      const alreadyParticipates = event.event_participants.some(
+        (eventParticipant) =>
+          eventParticipant.participant.email.toLowerCase() ===
+          email.toLowerCase()
+      );
 
-    if (alreadyParticipates) {
-      return res
-        .status(409)
-        .json({ message: "L'utilisateur participe déjà à cet évènement." });
+      if (alreadyParticipates) {
+        return res
+          .status(409)
+          .json({ message: "L'utilisateur participe déjà à cet évènement." });
+      }
+
+      const user = await User.findOne({ email });
+      event.event_participants.push({
+        participant: {
+          user: user ? user : null,
+          email,
+        },
+        role: Event.PARTICIPANT_ROLES.participant,
+        status: Event.PARTICIPANT_STATUSES.invited,
+        joinedAt: new Date(),
+      });
+
+      await event.save();
+
+      // Ajout de l'event aux events de l'utilisateur
+      if (user) {
+        user.events.push(event._id);
+        await user.save();
+      }
+
+      sendInvitationEmail(event, email, user);
+
+      return res.status(200).json(event);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
-
-    const user = await User.findOne({ email });
-    event.event_participants.push({
-      participant: {
-        name: user ? `${user.firstname} ${user.lastname}` : null,
-        email,
-      },
-      role: Event.PARTICIPANT_ROLES.participant,
-      status: Event.PARTICIPANT_STATUSES.invited,
-      joinedAt: new Date(),
-    });
-
-    await event.save();
-
-    // Ajout de l'event aux events de l'utilisateur
-    if (user) {
-      user.events.push(event._id);
-      await user.save();
-    }
-
-    sendInvitationEmail(event, email, user);
-
-    return res.status(200).json(event);
   }
 );
 
 // Accept/Decline invitation
-router.put("/:id/:action-invitation", isAuthenticated, async (req, res) => {
-  const { id, action } = req.params;
-  if (!["accept", "decline"].includes(action)) {
-    return res.status(404).json({ message: "Not found" });
+router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
+  try {
+    const { id, action } = req.params;
+    if (!["accept", "decline"].includes(action)) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: "Evènement introuvable" });
+    }
+
+    const participation = event.event_participants.find(
+      (eventParticipant) =>
+        eventParticipant.participant.email.toLowerCase() ===
+          req.user.email.toLowerCase() &&
+        Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
+    );
+    if (!participation) {
+      return res.status(404).json({ message: "Invitation introuvable" });
+    }
+
+    participation.participant.user = req.user._id;
+    participation.status =
+      "accept" === action
+        ? Event.PARTICIPANT_STATUSES.accepted
+        : Event.PARTICIPANT_STATUSES.declined;
+
+    await event.save();
+
+    return res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
+});
 
-  const event = await Event.findById(id);
-  if (!event) {
-    return res.status(404).json({ message: "Evènement introuvable" });
+// Participate for Birthday
+router.put(
+  "/:id/participate",
+  isAuthenticated,
+  eventParticipationValidators,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const event = await Event.findById(id);
+      if (!event) {
+        return res.status(404).json({ message: "Evènement introuvable" });
+      }
+
+      const participation = event.event_participants.find(
+        (eventParticipant) =>
+          eventParticipant.participant.email.toLowerCase() ===
+            req.user.email.toLowerCase() &&
+          Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
+      );
+      if (!participation) {
+        return res.status(403).json({ message: "Non-autorisé à participé" });
+      }
+
+      const { amount } = matchedData(req);
+      participation.participationAmount = amount;
+
+      await event.save();
+
+      res.status(200).json(event);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   }
+);
 
-  const participation = event.event_participants.find(
-    (eventParticipant) =>
-      eventParticipant.participant.email.toLowerCase() ===
-        req.user.email.toLowerCase() &&
-      Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
-  );
-  if (!participation) {
-    return res.status(404).json({ message: "Invitation introuvable" });
+// Draw for Secret Santa
+router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const event = req.event;
+    if (Event.TYPES.secret_santa !== event.event_type) {
+      return res.status(400).json({
+        message:
+          "Seuls les évènements Secret Santa nécessitent un tirage au sort",
+      });
+    }
+
+    if (2 > event.event_participants.length) {
+      return res.status(400).json({
+        message: "Il faut au moins 2 participants pour faire un tirage",
+      });
+    }
+
+    if (event.drawnAt) {
+      return res.status(400).json({
+        message: "Le tirage a déjà été effectué pour cet évènement",
+      });
+    }
+
+    // On effectue le tirage au sort uniquement sur les participants qui ont accepté
+    drawParticipants(
+      event.event_participants.filter(
+        (eventParticipant) =>
+          Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
+      )
+    );
+    event.drawnAt = new Date();
+
+    await event.save();
+
+    return res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  participation.participant.name = `${req.user.firstname} ${req.user.lastname}`;
-  participation.status =
-    "accept" === action
-      ? Event.PARTICIPANT_STATUSES.accepted
-      : Event.PARTICIPANT_STATUSES.declined;
-
-  await event.save();
-
-  return res.status(200).json(event);
 });
 
 //Delete Event
-router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const deletedEvent = await Event.findByIdAndDelete(req.params.id);
+
+    destroyFolder(
+      GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", deletedEvent._id)
+    );
     if (!deletedEvent)
       return res.status(404).json({ message: "Event not found" });
     res.status(200).json({ message: "Event deleted successfully" });
@@ -181,5 +302,8 @@ router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+const giftRoutes = require("./gift");
+router.use(giftRoutes);
 
 module.exports = router;

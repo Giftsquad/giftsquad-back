@@ -5,6 +5,7 @@ const isAdmin = async (req, res, next) => {
     // Rechercher l'événement à modifier
     const event = await Event.findById(req.params.id)
       .populate("event_organizer")
+      .populate("event_participants.participant.user")
       .populate("event_participants.assignedTo")
       .populate("event_participants.assignedBy");
 

@@ -47,7 +47,36 @@ const eventAddParticipantValidators = [
   handleValidationErrors,
 ];
 
+const eventParticipationValidators = [
+  body("amount")
+    .notEmpty()
+    .isFloat({ min: 0 })
+    .withMessage("Le montant de la participation doit être supérieur à 0"),
+  handleValidationErrors,
+];
+
+const eventGiftValidators = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .isLength({ min: 2, max: 30 })
+    .withMessage("Le nom doit faire entre 2 et 30 caractères"),
+  body("price")
+    .notEmpty()
+    .isFloat({ min: 0 })
+    .withMessage("Le prix doit être un montant supérieur à 0"),
+  body("url")
+    .trim()
+    .notEmpty()
+    .isURL()
+    .withMessage("Lien vers le produit invalide")
+    .normalizeEmail(),
+  handleValidationErrors,
+];
+
 module.exports = {
   eventCreateValidators,
   eventAddParticipantValidators,
+  eventGiftValidators,
+  eventParticipationValidators,
 };

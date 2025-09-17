@@ -16,6 +16,41 @@ const PARTICIPANT_STATUSES = {
   declined: "declined",
 };
 
+// Schéma pour les gifts (utilisé pour wishlist et gifts)
+const giftSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+  },
+  price: {
+    type: Number,
+  },
+  image: {
+    type: Object,
+    required: true,
+  },
+  url: {
+    type: String,
+    trim: true,
+  },
+  // Pour la liste de Noël : qui a acheté ce cadeau
+  purchasedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  // Rajouter status {planned: "planned", purchased: "purchased"} si on veut dire que tel cadeau est sélectionné pour la liste d'anniversaire
+  // Rajouter priority {low: "low", medium: "medium", high: "high"} ou Number (avec 0 = low, 100 = high) si on veut hierarchiser les cadeaux
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const eventSchema = new mongoose.Schema({
   event_type: {
     type: String,
@@ -35,7 +70,10 @@ const eventSchema = new mongoose.Schema({
     // Ajouter les infos des participants pour envoyer une invitation ou la notification sur l'app
     {
       participant: {
-        name: { type: String, trim: true },
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
         email: { type: String, required: true, trim: true },
       },
       // Définir le rôle pour définir les droits d'administrateurs afin de voir qui a pioché qui
@@ -55,18 +93,30 @@ const eventSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
-      // À qui cet utilisateur doit offrir un cadeau
+      // Pour la liste d'anniversaire : Montant de la participation
+      participationAmount: {
+        type: Number,
+      },
+      // Pour le Secret Santa : À qui cet utilisateur doit offrir un cadeau
       assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-      // Qui doit offrir un cadeau à cet utilisateur
+      // Pour le Secret Santa : Qui doit offrir un cadeau à cet utilisateur
       assignedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
+      // Pour la liste de Noël : liste des cadeaux souhaités
+      wishlist: [giftSchema],
     },
   ],
+  // Date du tirage au sort pour le Secret Santa
+  drawnAt: {
+    type: Date,
+  },
+  // Pour la liste d'anniversaire : liste des cadeaux à offrir
+  giftList: [giftSchema],
   createdAt: {
     type: Date,
     default: Date.now,
