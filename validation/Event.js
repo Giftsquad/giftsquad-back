@@ -47,6 +47,14 @@ const eventAddParticipantValidators = [
   handleValidationErrors,
 ];
 
+const eventParticipationValidators = [
+  body("amount")
+    .notEmpty()
+    .isFloat({ min: 0 })
+    .withMessage("Le montant de la participation doit être supérieur à 0"),
+  handleValidationErrors,
+];
+
 const eventGiftValidators = [
   body("name")
     .trim()
@@ -70,4 +78,5 @@ module.exports = {
   eventCreateValidators,
   eventAddParticipantValidators,
   eventGiftValidators,
+  eventParticipationValidators,
 };

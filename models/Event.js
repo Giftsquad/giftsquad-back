@@ -93,12 +93,16 @@ const eventSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
-      // À qui cet utilisateur doit offrir un cadeau
+      // Pour la liste d'anniversaire : Montant de la participation
+      participationAmount: {
+        type: Number,
+      },
+      // Pour le Secret Santa : À qui cet utilisateur doit offrir un cadeau
       assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-      // Qui doit offrir un cadeau à cet utilisateur
+      // Pour le Secret Santa : Qui doit offrir un cadeau à cet utilisateur
       assignedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

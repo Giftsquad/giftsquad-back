@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-router.put(
+router.post(
   "/:id/gift-list",
   isAuthenticated,
   isAdmin,

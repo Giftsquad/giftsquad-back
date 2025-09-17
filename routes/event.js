@@ -7,6 +7,7 @@ const User = require("../models/User");
 const {
   eventAddParticipantValidators,
   eventCreateValidators,
+  eventParticipationValidators,
 } = require("../validation/Event");
 const { matchedData } = require("express-validator");
 const { sendInvitationEmail } = require("../services/mailerService");
@@ -122,8 +123,8 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Add participant
-router.put(
-  "/:id/add-participant",
+router.post(
+  "/:id/participant",
   isAuthenticated,
   isAdmin,
   eventAddParticipantValidators,
@@ -174,7 +175,7 @@ router.put(
 );
 
 // Accept/Decline invitation
-router.put("/:id/:action-invitation", isAuthenticated, async (req, res) => {
+router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
   try {
     const { id, action } = req.params;
     if (!["accept", "decline"].includes(action)) {
@@ -210,8 +211,44 @@ router.put("/:id/:action-invitation", isAuthenticated, async (req, res) => {
   }
 });
 
+// Participate for Birthday
+router.put(
+  "/:id/participate",
+  isAuthenticated,
+  eventParticipationValidators,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const event = await Event.findById(id);
+      if (!event) {
+        return res.status(404).json({ message: "Evènement introuvable" });
+      }
+
+      const participation = event.event_participants.find(
+        (eventParticipant) =>
+          eventParticipant.participant.email.toLowerCase() ===
+            req.user.email.toLowerCase() &&
+          Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
+      );
+      if (!participation) {
+        return res.status(403).json({ message: "Non-autorisé à participé" });
+      }
+
+      const { amount } = matchedData(req);
+      participation.participationAmount = amount;
+
+      await event.save();
+
+      res.status(200).json(event);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 // Draw for Secret Santa
-router.put("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
+router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const event = req.event;
     if (Event.TYPES.secret_santa !== event.event_type) {
