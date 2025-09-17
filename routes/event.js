@@ -11,6 +11,10 @@ const {
 const { matchedData } = require("express-validator");
 const { sendInvitationEmail } = require("../services/mailerService");
 const { drawParticipants } = require("../services/drawService");
+const {
+  destroyFolder,
+  GIFT_LIST_FOLDER_PATTERN,
+} = require("../services/uploadService");
 
 // Create event
 router.post(
@@ -247,9 +251,13 @@ router.put("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 //Delete Event
-router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const deletedEvent = await Event.findByIdAndDelete(req.params.id);
+
+    destroyFolder(
+      GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", deletedEvent._id)
+    );
     if (!deletedEvent)
       return res.status(404).json({ message: "Event not found" });
     res.status(200).json({ message: "Event deleted successfully" });
@@ -257,5 +265,8 @@ router.delete("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+const giftRoutes = require("./gift");
+router.use(giftRoutes);
 
 module.exports = router;
