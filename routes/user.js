@@ -70,6 +70,15 @@ router.post("/login", userLoginValidators, async (req, res) => {
   }
 });
 
+// VALIDATE TOKEN
+router.post("/validate", isAuthenticated, async (req, res) => {
+  try {
+    return res.status(200).json(getShowableUser(req.user));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 // GET USER BY ID
 router.get("/:id", isAuthenticated, async (req, res) => {
   try {
