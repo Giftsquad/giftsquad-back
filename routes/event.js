@@ -3,6 +3,7 @@ const router = express.Router();
 const Event = require("../models/Event");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
+const isParticipant = require("../middlewares/isParticipant");
 const User = require("../models/User");
 const {
   eventAddParticipantValidators,
@@ -17,7 +18,7 @@ const {
   GIFT_LIST_FOLDER_PATTERN,
 } = require("../services/uploadService");
 
-// Create event
+// Création d'un évènement
 router.post(
   "/publish",
   isAuthenticated,
@@ -26,6 +27,7 @@ router.post(
     try {
       const { type, name, date, budget = null } = matchedData(req);
 
+      // On crée l'évènement et on ajoute l'utilisateur en tant qu'organisateur et participant
       const newEvent = new Event({
         event_type: type,
         event_name: name,
@@ -34,10 +36,8 @@ router.post(
         event_organizer: req.user,
         event_participants: [
           {
-            participant: {
-              user: req.user,
-              email: req.user.email,
-            },
+            user: req.user,
+            email: req.user.email,
             role: Event.PARTICIPANT_ROLES.organizer,
             status: Event.PARTICIPANT_STATUSES.accepted,
             joinedAt: new Date(),
@@ -46,7 +46,7 @@ router.post(
       });
       await newEvent.save();
 
-      // Ajout de l'event aux events de l'utilisateur
+      // Ajout de l'évènement aux évènements de l'utilisateur
       req.user.events.push(newEvent._id);
       await req.user.save();
 
@@ -57,11 +57,11 @@ router.post(
   }
 );
 
-// Read All Events for authenticated user
+// Liste de tous les évènements de l'utilisateur connecté
 router.get("", isAuthenticated, async (req, res) => {
   try {
     const events = await Event.find({
-      "event_participants.participant.email": req.user.email,
+      "event_participants.email": req.user.email,
     });
     res.status(200).json(events);
   } catch (error) {
@@ -69,17 +69,20 @@ router.get("", isAuthenticated, async (req, res) => {
   }
 });
 
-// Read All Invitations for authenticated user
+// Liste de toutes les invitations de l'utilisateur connecté
 router.get("/invitations", isAuthenticated, async (req, res) => {
   try {
+    // On filtre sur tous les évènements pour lequel l'email correspond et le statut est "invité"
     const events = await Event.find({
       event_participants: {
         $elemMatch: {
-          "participant.email": req.user.email,
+          email: req.user.email,
           status: Event.PARTICIPANT_STATUSES.invited,
         },
       },
-    });
+    })
+      .populate("event_organizer")
+      .populate("user");
 
     res.status(200).json(events);
   } catch (error) {
@@ -87,12 +90,14 @@ router.get("/invitations", isAuthenticated, async (req, res) => {
   }
 });
 
-// Read specific Event
+// Lire les informations d'un évènement
 router.get("/:id", isAuthenticated, async (req, res) => {
   try {
+    // On récupère l'évènement complet avec toutes ses références
     const event = await Event.findById(req.params.id)
       .populate("event_organizer")
-      .populate("event_participants.participant.user")
+      .populate("event_participants.user")
+      .populate("event_participants.wishList.purchasedBy")
       .populate("event_participants.assignedTo")
       .populate("event_participants.assignedBy");
 
@@ -122,7 +127,7 @@ router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
-// Add participant
+// Ajout d'un participant à un évènement
 router.post(
   "/:id/participant",
   isAuthenticated,
@@ -134,24 +139,23 @@ router.post(
 
       const event = req.event;
 
+      // Si l'utilisateur participe déjà à cet évènement, on renvoie une erreur
       const alreadyParticipates = event.event_participants.some(
         (eventParticipant) =>
-          eventParticipant.participant.email.toLowerCase() ===
-          email.toLowerCase()
+          eventParticipant.email.toLowerCase() === email.toLowerCase()
       );
-
       if (alreadyParticipates) {
         return res
           .status(409)
           .json({ message: "L'utilisateur participe déjà à cet évènement." });
       }
 
+      // On ajoute le participant à la liste
+      // Si l'utilisateur a un compte, on le lie à l'évènement
       const user = await User.findOne({ email });
       event.event_participants.push({
-        participant: {
-          user: user ? user : null,
-          email,
-        },
+        user: user ? user : null,
+        email,
         role: Event.PARTICIPANT_ROLES.participant,
         status: Event.PARTICIPANT_STATUSES.invited,
         joinedAt: new Date(),
@@ -159,15 +163,16 @@ router.post(
 
       await event.save();
 
-      // Ajout de l'event aux events de l'utilisateur
+      // Si l'utilisateur a un compte, on ajoute l'évènement à ses évènements
       if (user) {
         user.events.push(event._id);
         await user.save();
       }
 
+      // On envoie un email pour notifier l'utilisateur
       sendInvitationEmail(event, email, user);
 
-      return res.status(200).json(event);
+      res.status(200).json(event);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -178,26 +183,29 @@ router.post(
 router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
   try {
     const { id, action } = req.params;
+    // Le paramètre `action` accepte uniquement "accept" ou "decline"
     if (!["accept", "decline"].includes(action)) {
       return res.status(404).json({ message: "Not found" });
     }
 
+    // On récupère l'évènement
     const event = await Event.findById(id);
     if (!event) {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
+    // On vérifie s'il existe bien une participation correspondant à son adresse email et avec le statut "invité"
     const participation = event.event_participants.find(
       (eventParticipant) =>
-        eventParticipant.participant.email.toLowerCase() ===
-          req.user.email.toLowerCase() &&
+        eventParticipant.email.toLowerCase() === req.user.email.toLowerCase() &&
         Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
     );
     if (!participation) {
       return res.status(404).json({ message: "Invitation introuvable" });
     }
 
-    participation.participant.user = req.user._id;
+    // On lie l'utilisateur à la participation et on met à jour son statut en fonction de l'action récupérée dans l'url
+    participation.user = req.user._id;
     participation.status =
       "accept" === action
         ? Event.PARTICIPANT_STATUSES.accepted
@@ -205,36 +213,36 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
 
     await event.save();
 
-    return res.status(200).json(event);
+    // Si l'évènement n'est pas encore lié à l'utilisateur, on ajoute l'évènement à ses évènements
+    if (!req.user.events.find((userEvent) => userEvent._id.equals(event._id))) {
+      req.user.events.push(event._id);
+      await req.user.save();
+    }
+
+    res.status(200).json(event);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Participate for Birthday
+// Participer pour une Liste d'anniversaire
 router.put(
   "/:id/participate",
   isAuthenticated,
+  isParticipant,
   eventParticipationValidators,
   async (req, res) => {
     try {
-      const { id } = req.params;
-
-      const event = await Event.findById(id);
-      if (!event) {
-        return res.status(404).json({ message: "Evènement introuvable" });
+      const { event, participation } = req;
+      // Si ce n'est pas une Liste d'anniversaire, il n'y a pas de participation
+      if (Event.TYPES.birthday !== event.event_type) {
+        return res.status(400).json({
+          message:
+            "Seuls les évènements Liste d'anniversaire nécessitent une participation",
+        });
       }
 
-      const participation = event.event_participants.find(
-        (eventParticipant) =>
-          eventParticipant.participant.email.toLowerCase() ===
-            req.user.email.toLowerCase() &&
-          Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
-      );
-      if (!participation) {
-        return res.status(403).json({ message: "Non-autorisé à participé" });
-      }
-
+      // On met à jour le montant de la participation
       const { amount } = matchedData(req);
       participation.participationAmount = amount;
 
@@ -247,10 +255,11 @@ router.put(
   }
 );
 
-// Draw for Secret Santa
+// Tirage au sort pour le Secret Santa
 router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const event = req.event;
+    // Si ce n'est pas un Secret Santa, il n'y a pas de tirage au sort
     if (Event.TYPES.secret_santa !== event.event_type) {
       return res.status(400).json({
         message:
@@ -258,12 +267,14 @@ router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
+    // S'il n'y a que 2 participants il n'y a pas besoin de tirage
     if (2 > event.event_participants.length) {
       return res.status(400).json({
         message: "Il faut au moins 2 participants pour faire un tirage",
       });
     }
 
+    // Si le tirage a déjà été effectué, on renvoie une erreur
     if (event.drawnAt) {
       return res.status(400).json({
         message: "Le tirage a déjà été effectué pour cet évènement",
@@ -287,22 +298,29 @@ router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
-//Delete Event
+// Supprimer un évènement
 router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
+    // On supprime l'évènement
     const deletedEvent = await Event.findByIdAndDelete(req.params.id);
 
+    // On supprime également les photos de l'évènement
     destroyFolder(
       GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", deletedEvent._id)
     );
-    if (!deletedEvent)
-      return res.status(404).json({ message: "Event not found" });
+
+    // Si l'évènement est introuvable on renvoie une erreur
+    if (!deletedEvent) {
+      return res.status(404).json({ message: "Evènement introuvable" });
+    }
+
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
+// Ajout des routes concernants les cadeaux et souhaits
 const giftRoutes = require("./gift");
 router.use(giftRoutes);
 

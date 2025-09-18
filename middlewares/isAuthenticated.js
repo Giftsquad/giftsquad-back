@@ -12,7 +12,7 @@ const isAuthenticated = async (req, res, next) => {
     const token = req.headers.authorization.replace("Bearer ", "");
 
     // Chercher l'utilisateur avec ce token
-    let user = await User.findOne({ token: token });
+    let user = await User.findOne({ token: token }).populate("events");
 
     if (!user) {
       // Si aucun utilisateur trouvé avec ce token, essayer de trouver par email

@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Utilisation de constantes pour les champs enum
 const TYPES = {
   secret_santa: "Secret Santa",
-  christmas_list: "Christmast List",
+  christmas_list: "Christmas List",
   birthday: "Birthday",
 };
 const PARTICIPANT_ROLES = {
@@ -16,7 +16,7 @@ const PARTICIPANT_STATUSES = {
   declined: "declined",
 };
 
-// Schéma pour les gifts (utilisé pour wishlist et gifts)
+// Schéma pour les gifts (utilisé pour wishList et giftList)
 const giftSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -69,13 +69,11 @@ const eventSchema = new mongoose.Schema({
   event_participants: [
     // Ajouter les infos des participants pour envoyer une invitation ou la notification sur l'app
     {
-      participant: {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        email: { type: String, required: true, trim: true },
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
       },
+      email: { type: String, required: true, trim: true },
       // Définir le rôle pour définir les droits d'administrateurs afin de voir qui a pioché qui
       role: {
         type: String,
@@ -108,7 +106,7 @@ const eventSchema = new mongoose.Schema({
         ref: "User",
       },
       // Pour la liste de Noël : liste des cadeaux souhaités
-      wishlist: [giftSchema],
+      wishList: [giftSchema],
     },
   ],
   // Date du tirage au sort pour le Secret Santa
@@ -138,7 +136,7 @@ eventSchema.statics.PARTICIPANT_ROLES = PARTICIPANT_ROLES;
 eventSchema.statics.PARTICIPANT_STATUSES = PARTICIPANT_STATUSES;
 
 // Ajout d'un index sur le champ email du participant pour accélérer les recherches
-eventSchema.index({ "participants.participant.email": 1 });
+eventSchema.index({ "event_participants.email": 1 });
 
 const Event = mongoose.model("Event", eventSchema);
 

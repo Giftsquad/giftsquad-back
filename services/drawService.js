@@ -31,8 +31,8 @@ const drawParticipants = (participants) => {
     const receiverIndex = shuffledIndexes[i];
     const receiver = participants[receiverIndex];
 
-    giver.assignedTo = receiver.participant.user;
-    receiver.assignedBy = giver.participant.user;
+    giver.assignedTo = receiver.user;
+    receiver.assignedBy = giver.user;
   });
 };
 
