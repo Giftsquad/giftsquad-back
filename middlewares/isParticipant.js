@@ -5,7 +5,7 @@ const isParticipant = async (req, res, next) => {
     // Rechercher l'événement à modifier
     const event = await Event.findById(req.params.id)
       .populate("event_organizer")
-      .populate("event_participants.participant.user")
+      .populate("event_participants.user")
       .populate("event_participants.assignedTo")
       .populate("event_participants.assignedBy");
 
@@ -22,8 +22,7 @@ const isParticipant = async (req, res, next) => {
 
     const participation = event.event_participants.find(
       (eventParticipant) =>
-        eventParticipant.participant.email.toLowerCase() ===
-          req.user.email.toLowerCase() &&
+        eventParticipant.email.toLowerCase() === req.user.email.toLowerCase() &&
         Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
     );
     if (!participation) {

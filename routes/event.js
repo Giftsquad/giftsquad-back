@@ -36,10 +36,8 @@ router.post(
         event_organizer: req.user,
         event_participants: [
           {
-            participant: {
-              user: req.user,
-              email: req.user.email,
-            },
+            user: req.user,
+            email: req.user.email,
             role: Event.PARTICIPANT_ROLES.organizer,
             status: Event.PARTICIPANT_STATUSES.accepted,
             joinedAt: new Date(),
@@ -63,7 +61,7 @@ router.post(
 router.get("", isAuthenticated, async (req, res) => {
   try {
     const events = await Event.find({
-      "event_participants.participant.email": req.user.email,
+      "event_participants.email": req.user.email,
     });
     res.status(200).json(events);
   } catch (error) {
@@ -78,13 +76,13 @@ router.get("/invitations", isAuthenticated, async (req, res) => {
     const events = await Event.find({
       event_participants: {
         $elemMatch: {
-          "participant.email": req.user.email,
+          email: req.user.email,
           status: Event.PARTICIPANT_STATUSES.invited,
         },
       },
     })
       .populate("event_organizer")
-      .populate("participant.user");
+      .populate("user");
 
     res.status(200).json(events);
   } catch (error) {
@@ -98,7 +96,7 @@ router.get("/:id", isAuthenticated, async (req, res) => {
     // On récupère l'évènement complet avec toutes ses références
     const event = await Event.findById(req.params.id)
       .populate("event_organizer")
-      .populate("event_participants.participant.user")
+      .populate("event_participants.user")
       .populate("event_participants.wishList.purchasedBy")
       .populate("event_participants.assignedTo")
       .populate("event_participants.assignedBy");
@@ -144,8 +142,7 @@ router.post(
       // Si l'utilisateur participe déjà à cet évènement, on renvoie une erreur
       const alreadyParticipates = event.event_participants.some(
         (eventParticipant) =>
-          eventParticipant.participant.email.toLowerCase() ===
-          email.toLowerCase()
+          eventParticipant.email.toLowerCase() === email.toLowerCase()
       );
       if (alreadyParticipates) {
         return res
@@ -157,10 +154,8 @@ router.post(
       // Si l'utilisateur a un compte, on le lie à l'évènement
       const user = await User.findOne({ email });
       event.event_participants.push({
-        participant: {
-          user: user ? user : null,
-          email,
-        },
+        user: user ? user : null,
+        email,
         role: Event.PARTICIPANT_ROLES.participant,
         status: Event.PARTICIPANT_STATUSES.invited,
         joinedAt: new Date(),
@@ -202,8 +197,7 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
     // On vérifie s'il existe bien une participation correspondant à son adresse email et avec le statut "invité"
     const participation = event.event_participants.find(
       (eventParticipant) =>
-        eventParticipant.participant.email.toLowerCase() ===
-          req.user.email.toLowerCase() &&
+        eventParticipant.email.toLowerCase() === req.user.email.toLowerCase() &&
         Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
     );
     if (!participation) {
@@ -211,7 +205,7 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
     }
 
     // On lie l'utilisateur à la participation et on met à jour son statut en fonction de l'action récupérée dans l'url
-    participation.participant.user = req.user._id;
+    participation.user = req.user._id;
     participation.status =
       "accept" === action
         ? Event.PARTICIPANT_STATUSES.accepted
