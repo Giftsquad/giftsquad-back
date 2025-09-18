@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Utilisation de constantes pour les champs enum
 const TYPES = {
   secret_santa: "Secret Santa",
-  christmas_list: "Christmast List",
+  christmas_list: "Christmas List",
   birthday: "Birthday",
 };
 const PARTICIPANT_ROLES = {
@@ -16,7 +16,7 @@ const PARTICIPANT_STATUSES = {
   declined: "declined",
 };
 
-// Schéma pour les gifts (utilisé pour wishlist et gifts)
+// Schéma pour les gifts (utilisé pour wishList et giftList)
 const giftSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -108,7 +108,7 @@ const eventSchema = new mongoose.Schema({
         ref: "User",
       },
       // Pour la liste de Noël : liste des cadeaux souhaités
-      wishlist: [giftSchema],
+      wishList: [giftSchema],
     },
   ],
   // Date du tirage au sort pour le Secret Santa

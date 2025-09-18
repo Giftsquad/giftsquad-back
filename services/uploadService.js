@@ -7,6 +7,7 @@ cloudinary.config({
 });
 
 const GIFT_LIST_FOLDER_PATTERN = "giftsquad/gift-list/{eventId}/";
+const WISH_LIST_FOLDER_PATTERN = "giftsquad/wish-list/{eventId}/{userId}";
 
 const uploadFile = async (uploadedFile, prefix) => {
   return await cloudinary.uploader.upload(convertFileToBase64(uploadedFile), {
@@ -39,6 +40,7 @@ const convertFileToBase64 = (file) => {
 
 module.exports = {
   GIFT_LIST_FOLDER_PATTERN,
+  WISH_LIST_FOLDER_PATTERN,
   uploadFile,
   destroyFile,
   destroyFolder,
