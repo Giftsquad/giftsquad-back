@@ -82,7 +82,7 @@ router.get("/invitations", isAuthenticated, async (req, res) => {
       },
     })
       .populate("event_organizer")
-      .populate("user");
+      .populate("event_participants.user");
 
     res.status(200).json(events);
   } catch (error) {
