@@ -31,7 +31,7 @@ const sendInvitationEmail = (event, email, user) => {
   const subject = `Invitation à ${event.event_name}`;
 
   // Liens pour accepter et décliner l'invitation (directement vers le backend)
-  const baseUrl = process.env.API_URL;
+  const baseUrl = process.env.APP_URL;
   const acceptLink = `${baseUrl}/event/${
     event._id
   }/participant/accept?email=${encodeURIComponent(email)}`;
