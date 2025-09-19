@@ -30,26 +30,62 @@ const sendInvitationEmail = (event, email, user) => {
 
   const subject = `Invitation à ${event.event_name}`;
 
-  const invitationLink = `${process.env.APP_URL}/invitations`;
+  // Liens pour accepter et décliner l'invitation (directement vers le backend)
+  const baseUrl = process.env.API_URL;
+  const acceptLink = `${baseUrl}/event/${
+    event._id
+  }/participant/accept?email=${encodeURIComponent(email)}`;
+  const declineLink = `${baseUrl}/event/${
+    event._id
+  }/participant/decline?email=${encodeURIComponent(email)}`;
+
   const html = `
-<p>Bonjour ${user ? user.firstname : ""},</p>
-<p>Vous avez reçu une invitation à l'évènement ${
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #4CAF50; text-align: center;">Invitation à ${
     event.event_name
-  } qui aura lieu le ${event.event_date.toLocaleDateString()}.</p>
-<p>Veuillez installer l'application ou vous connecter pour accepter ou décliner l'invitation.</p>
-<a href="${invitationLink}">Voir l'invitation</a>
+  }</h2>
+  
+  <p>Bonjour ${user ? user.firstname : email.split("@")[0]},</p>
+  
+  <p>Vous avez reçu une invitation à l'événement <strong>${
+    event.event_name
+  }</strong> qui aura lieu le ${new Date(event.event_date).toLocaleDateString(
+    "fr-FR"
+  )}.</p>
+  
+  <p><strong>Type d'événement :</strong> ${event.event_type}</p>
+  ${
+    event.event_budget
+      ? `<p><strong>Budget conseillé :</strong> ${event.event_budget}€</p>`
+      : ""
+  }
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${acceptLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">✅ Accepter l'invitation</a>
+    
+    <a href="${declineLink}" style="background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">❌ Décliner l'invitation</a>
+  </div>
+</div>
 `;
 
+  // text = Fallback pour les clients email basiques ou quand HTML est désactivé
   const text = `
-Bonjour ${user ? user.firstname : ""},
+Invitation à ${event.event_name}
 
-Vous avez reçu une invitation à l'évènement ${
+Bonjour ${user ? user.firstname : email.split("@")[0]},
+
+Vous avez reçu une invitation à l'événement ${
     event.event_name
-  } qui aura lieu le ${event.event_date.toLocaleDateString()}.
+  } qui aura lieu le ${new Date(event.event_date).toLocaleDateString("fr-FR")}.
 
-Veuillez installer l'application ou vous connecter pour accepter ou décliner l'invitation en cliquant sur ce lien :
-${invitationLink}
-`;
+Type d'événement : ${event.event_type}
+${event.event_budget ? `Budget conseillé : ${event.event_budget}€` : ""}
+
+Pour accepter l'invitation, cliquez sur ce lien :
+${acceptLink}
+
+Pour décliner l'invitation, cliquez sur ce lien :
+${declineLink}`;
 
   sendMail(to, subject, text, html);
 };

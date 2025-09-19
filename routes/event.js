@@ -179,13 +179,20 @@ router.post(
   }
 );
 
-// Accept/Decline invitation
-router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
+// Accept/Decline invitation (accessible sans authentification via email)
+router.put("/:id/participant/:action", async (req, res) => {
   try {
     const { id, action } = req.params;
+    const { email } = req.query;
+
     // Le paramètre `action` accepte uniquement "accept" ou "decline"
     if (!["accept", "decline"].includes(action)) {
       return res.status(404).json({ message: "Not found" });
+    }
+
+    // Vérifier que l'email est fourni
+    if (!email) {
+      return res.status(400).json({ message: "Email requis" });
     }
 
     // On récupère l'évènement
@@ -194,10 +201,19 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
+    // Vérifier si l'utilisateur existe dans la base de données
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({
+        message:
+          "Utilisateur non trouvé. Vous devez d'abord créer un compte pour participer à cet événement.",
+      });
+    }
+
     // On vérifie s'il existe bien une participation correspondant à son adresse email et avec le statut "invité"
     const participation = event.event_participants.find(
       (eventParticipant) =>
-        eventParticipant.email.toLowerCase() === req.user.email.toLowerCase() &&
+        eventParticipant.email.toLowerCase() === email.toLowerCase() &&
         Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
     );
     if (!participation) {
@@ -205,7 +221,7 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
     }
 
     // On lie l'utilisateur à la participation et on met à jour son statut en fonction de l'action récupérée dans l'url
-    participation.user = req.user._id;
+    participation.user = user._id;
     participation.status =
       "accept" === action
         ? Event.PARTICIPANT_STATUSES.accepted
@@ -213,15 +229,115 @@ router.put("/:id/participant/:action", isAuthenticated, async (req, res) => {
 
     await event.save();
 
-    // Si l'évènement n'est pas encore lié à l'utilisateur, on ajoute l'évènement à ses évènements
-    if (!req.user.events.find((userEvent) => userEvent._id.equals(event._id))) {
-      req.user.events.push(event._id);
-      await req.user.save();
+    // Si l'action est "accept" et l'évènement n'est pas encore lié à l'utilisateur, on ajoute l'évènement à ses évènements
+    if (
+      "accept" === action &&
+      !user.events.find((userEvent) => userEvent._id.equals(event._id))
+    ) {
+      user.events.push(event._id);
+      await user.save();
     }
 
-    res.status(200).json(event);
+    // Retourner une réponse JSON simple
+    res.status(200).json({
+      success: true,
+      message:
+        action === "accept" ? "Invitation acceptée" : "Invitation déclinée",
+      event: {
+        name: event.event_name,
+        date: event.event_date,
+        type: event.event_type,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    // Retourner une réponse JSON d'erreur
+    res.status(500).json({
+      success: false,
+      message:
+        "Une erreur s'est produite lors du traitement de votre invitation",
+      error: error.message,
+    });
+  }
+});
+
+// Route GET pour gérer les clics sur les liens dans l'email (redirection depuis les boutons)
+router.get("/:id/participant/:action", async (req, res) => {
+  try {
+    const { id, action } = req.params;
+    const { email } = req.query;
+
+    // Le paramètre `action` accepte uniquement "accept" ou "decline"
+    if (!["accept", "decline"].includes(action)) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    // Vérifier que l'email est fourni
+    if (!email) {
+      return res.status(400).json({ message: "Email requis" });
+    }
+
+    // On récupère l'évènement
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: "Evènement introuvable" });
+    }
+
+    // Vérifier si l'utilisateur existe dans la base de données
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({
+        message:
+          "Utilisateur non trouvé. Vous devez d'abord créer un compte pour participer à cet événement.",
+      });
+    }
+
+    // On vérifie s'il existe bien une participation correspondant à son adresse email et avec le statut "invité"
+    const participation = event.event_participants.find(
+      (eventParticipant) =>
+        eventParticipant.email.toLowerCase() === email.toLowerCase() &&
+        Event.PARTICIPANT_STATUSES.invited === eventParticipant.status
+    );
+    if (!participation) {
+      return res.status(404).json({ message: "Invitation introuvable" });
+    }
+
+    // On lie l'utilisateur à la participation et on met à jour son statut en fonction de l'action récupérée dans l'url
+    participation.user = user._id;
+    participation.status =
+      "accept" === action
+        ? Event.PARTICIPANT_STATUSES.accepted
+        : Event.PARTICIPANT_STATUSES.declined;
+
+    await event.save();
+
+    // Si l'action est "accept" et l'évènement n'est pas encore lié à l'utilisateur, on ajoute l'évènement à ses évènements
+    if (
+      "accept" === action &&
+      !user.events.find((userEvent) => userEvent._id.equals(event._id))
+    ) {
+      user.events.push(event._id);
+      await user.save();
+    }
+
+    // Retourner une réponse JSON simple
+    res.status(200).json({
+      success: true,
+      message:
+        action === "accept" ? "Invitation acceptée" : "Invitation déclinée",
+      event: {
+        name: event.event_name,
+        date: event.event_date,
+        type: event.event_type,
+      },
+    });
+  } catch (error) {
+    // Retourner une réponse JSON d'erreur
+    res.status(500).json({
+      success: false,
+      message:
+        "Une erreur s'est produite lors du traitement de votre invitation",
+      error: error.message,
+    });
   }
 });
 

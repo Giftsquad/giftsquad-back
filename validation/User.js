@@ -2,12 +2,7 @@ const { body } = require("express-validator");
 const handleValidationErrors = require("../middlewares/handleValidationErrors");
 
 const userSignupValidators = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .isEmail()
-    .withMessage("Email invalide")
-    .normalizeEmail(),
+  body("email").trim().notEmpty().isEmail().withMessage("Email invalide"),
   body("firstname")
     .trim()
     .notEmpty()
@@ -32,23 +27,13 @@ const userSignupValidators = [
 ];
 
 const userLoginValidators = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .isEmail()
-    .withMessage("Email invalide")
-    .normalizeEmail(),
+  body("email").trim().notEmpty().isEmail().withMessage("Email invalide"),
   body("password").notEmpty().withMessage("Le mot de passe est requis"),
   handleValidationErrors,
 ];
 
 const userUpdateValidators = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .isEmail()
-    .withMessage("Email invalide")
-    .normalizeEmail(),
+  body("email").trim().notEmpty().isEmail().withMessage("Email invalide"),
   body("firstname")
     .trim()
     .notEmpty()

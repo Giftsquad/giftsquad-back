@@ -38,12 +38,7 @@ const eventCreateValidators = [
 ];
 
 const eventAddParticipantValidators = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .isEmail()
-    .withMessage("Email invalide")
-    .normalizeEmail(),
+  body("email").trim().notEmpty().isEmail().withMessage("Email invalide"),
   handleValidationErrors,
 ];
 
@@ -69,8 +64,7 @@ const eventGiftValidators = [
     .trim()
     .notEmpty()
     .isURL()
-    .withMessage("Lien vers le produit invalide")
-    .normalizeEmail(),
+    .withMessage("Lien vers le produit invalide"),
   handleValidationErrors,
 ];
 
