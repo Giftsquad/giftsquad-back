@@ -38,12 +38,7 @@ const eventCreateValidators = [
 ];
 
 const eventAddParticipantValidators = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .isEmail()
-    .withMessage("Email invalide")
-    .normalizeEmail(),
+  body("email").trim().notEmpty().isEmail().withMessage("Email invalide"),
   handleValidationErrors,
 ];
 
