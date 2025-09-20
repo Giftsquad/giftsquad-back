@@ -26,7 +26,7 @@ router.post(
     try {
       const event = req.event;
       // Si ce n'est pas une Liste d'anniversaire, il n'y a pas de liste de cadeaux
-      if (Event.TYPES.birthday !== event.event_type) {
+      if (event.event_type.toLowerCase() !== Event.TYPES.birthday.toLowerCase()) {
         return res.status(400).json({
           message:
             "Seuls les évènements Listes d'anniversaire ont une liste de cadeaux",

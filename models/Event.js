@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 // Utilisation de constantes pour les champs enum
 const TYPES = {
-  secret_santa: "Secret Santa",
-  christmas_list: "Christmas List",
-  birthday: "Birthday",
+  secret_santa: "secret_santa",
+  christmas_list: "christmas_list",
+  birthday: "birthday",
 };
 const PARTICIPANT_ROLES = {
   participant: "participant",

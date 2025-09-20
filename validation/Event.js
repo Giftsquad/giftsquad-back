@@ -61,8 +61,7 @@ const eventGiftValidators = [
     .isFloat({ min: 0 })
     .withMessage("Le prix doit être un montant supérieur à 0"),
   body("url")
-    .trim()
-    .notEmpty()
+    .optional({ checkFalsy: true }) // <-- url n’est pas obligatoire
     .isURL()
     .withMessage("Lien vers le produit invalide"),
   handleValidationErrors,
