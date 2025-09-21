@@ -282,6 +282,17 @@ router.get("/:id/participant/:action", async (req, res) => {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
+    // Vérifier que l'email fait bien partie de la liste des invités
+    const isInvited = event.event_participants.some(
+      (participant) => participant.email === email
+    );
+
+    if (!isInvited) {
+      return res.status(403).json({
+        message: "Vous n'êtes pas invité à cet événement",
+      });
+    }
+
     // Vérifier si l'utilisateur existe dans la base de données
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
@@ -417,24 +428,103 @@ router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
 // Supprimer un évènement
 router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
+    const eventId = req.params.id;
+
+    // Récupérer l'événement avant de le supprimer pour avoir la liste des participants
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Evènement introuvable" });
+    }
+
+    // Supprimer l'ID de l'événement de tous les profils utilisateurs concernés
+    const participantIds = event.event_participants
+      .filter((participant) => participant.user)
+      .map((participant) => participant.user);
+
+    if (participantIds.length > 0) {
+      await User.updateMany(
+        { _id: { $in: participantIds } },
+        { $pull: { events: eventId } }
+      );
+    }
+
     // On supprime l'évènement
-    const deletedEvent = await Event.findByIdAndDelete(req.params.id);
+    const deletedEvent = await Event.findByIdAndDelete(eventId);
 
     // On supprime également les photos de l'évènement
     destroyFolder(
       GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", deletedEvent._id)
     );
 
-    // Si l'évènement est introuvable on renvoie une erreur
-    if (!deletedEvent) {
-      return res.status(404).json({ message: "Evènement introuvable" });
-    }
-
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Route DELETE pour retirer un participant (seulement pour l'organisateur)
+router.delete(
+  "/:id/participant/:email",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { email } = req.params;
+      const event = req.event; // L'événement est déjà récupéré par isAdmin
+
+      // Vérifier que le participant à retirer existe
+      const participantIndex = event.event_participants.findIndex(
+        (participant) => participant.email === email
+      );
+
+      if (participantIndex === -1) {
+        return res.status(404).json({
+          message: "Participant introuvable dans cet événement",
+        });
+      }
+
+      // Ne pas permettre de retirer l'organisateur lui-même
+      if (event.event_participants[participantIndex].role === "organizer") {
+        return res.status(400).json({
+          message: "L'organisateur ne peut pas se retirer de l'événement",
+        });
+      }
+
+      const participant = event.event_participants[participantIndex];
+
+      // Retirer le participant
+      event.event_participants.splice(participantIndex, 1);
+      await event.save();
+
+      // Supprimer l'ID de l'événement du profil utilisateur
+      if (participant.user) {
+        await User.findByIdAndUpdate(participant.user, {
+          $pull: { events: req.params.id },
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Participant retiré avec succès",
+        event: {
+          _id: event._id,
+          event_name: event.event_name,
+          event_type: event.event_type,
+          event_participants: event.event_participants,
+        },
+      });
+    } catch (error) {
+      console.error("Erreur lors de la suppression du participant:", error);
+      res.status(500).json({
+        success: false,
+        message:
+          "Une erreur s'est produite lors de la suppression du participant",
+        error: error.message,
+      });
+    }
+  }
+);
 
 // Ajout des routes concernants les cadeaux et souhaits
 const giftRoutes = require("./gift");
