@@ -14,8 +14,9 @@ const { matchedData } = require("express-validator");
 const { sendInvitationEmail } = require("../services/mailerService");
 const { drawParticipants } = require("../services/drawService");
 const {
+  createFolder,
   destroyFolder,
-  GIFT_LIST_FOLDER_PATTERN,
+  EVENT_FOLDER_PATTERN,
 } = require("../services/uploadService");
 
 // Création d'un évènement
@@ -46,6 +47,24 @@ router.post(
       });
       await newEvent.save();
 
+      // Créer le dossier Cloudinary pour cet événement
+      try {
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          newEvent._id
+        );
+        await createFolder(eventFolder);
+        console.log(
+          `Dossier Cloudinary créé pour l'événement ${newEvent._id}: ${eventFolder}`
+        );
+      } catch (folderError) {
+        console.error(
+          "Erreur lors de la création du dossier Cloudinary:",
+          folderError
+        );
+        // On continue même si la création du dossier échoue
+      }
+
       // Ajout de l'évènement aux évènements de l'utilisateur
       req.user.events.push(newEvent._id);
       await req.user.save();
@@ -57,12 +76,19 @@ router.post(
   }
 );
 
-// Liste de tous les évènements de l'utilisateur connecté
+// Liste de tous les évènements de l'utilisateur connecté (seulement ceux acceptés)
 router.get("", isAuthenticated, async (req, res) => {
   try {
     const events = await Event.find({
-      "event_participants.email": req.user.email,
-    });
+      event_participants: {
+        $elemMatch: {
+          email: req.user.email,
+          status: Event.PARTICIPANT_STATUSES.accepted,
+        },
+      },
+    })
+      .populate("event_organizer")
+      .populate("event_participants.user");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -452,10 +478,20 @@ router.delete("/:id", isAuthenticated, isAdmin, async (req, res) => {
     // On supprime l'évènement
     const deletedEvent = await Event.findByIdAndDelete(eventId);
 
-    // On supprime également les photos de l'évènement
-    destroyFolder(
-      GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", deletedEvent._id)
-    );
+    // On supprime également le dossier de l'évènement
+    try {
+      const eventFolder = EVENT_FOLDER_PATTERN.replace(
+        "{eventId}",
+        deletedEvent._id
+      );
+      await destroyFolder(eventFolder);
+    } catch (folderError) {
+      console.error(
+        "Erreur lors de la suppression du dossier Cloudinary:",
+        folderError
+      );
+      // On continue même si la suppression du dossier échoue
+    }
 
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {

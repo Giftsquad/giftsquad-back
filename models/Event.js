@@ -30,10 +30,12 @@ const giftSchema = new mongoose.Schema({
   price: {
     type: Number,
   },
-  image: {
-    type: Object,
-    required: true,
-  },
+  images: [
+    {
+      type: Object,
+      required: false,
+    },
+  ],
   url: {
     type: String,
     trim: true,

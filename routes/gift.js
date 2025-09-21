@@ -8,8 +8,8 @@ const Event = require("../models/Event");
 const {
   uploadFile,
   destroyFile,
-  GIFT_LIST_FOLDER_PATTERN,
-  WISH_LIST_FOLDER_PATTERN,
+  createFolder,
+  EVENT_FOLDER_PATTERN,
 } = require("../services/uploadService");
 const isParticipant = require("../middlewares/isParticipant");
 
@@ -26,24 +26,48 @@ router.post(
     try {
       const event = req.event;
       // Si ce n'est pas une Liste d'anniversaire, il n'y a pas de liste de cadeaux
-      if (event.event_type.toLowerCase() !== Event.TYPES.birthday.toLowerCase()) {
+      if (
+        event.event_type.toLowerCase() !== Event.TYPES.birthday.toLowerCase()
+      ) {
         return res.status(400).json({
           message:
             "Seuls les évènements Listes d'anniversaire ont une liste de cadeaux",
         });
       }
 
-      // On teste la validité de l'image ici car express-validator ne prend pas en compte les files
-      const image = req.files?.image;
-      if (
-        !image ||
-        "object" !== typeof image ||
-        !image.data ||
-        !image.mimetype.includes("image")
-      ) {
-        return res.status(400).json({
-          message: "L'image du cadeau doit être une image valide",
-        });
+      // On teste la validité des images ici car express-validator ne prend pas en compte les files
+      const images = req.files?.images;
+      let uploadedImages = [];
+
+      if (images) {
+        // Si c'est un seul fichier, on le met dans un tableau
+        const imageArray = Array.isArray(images) ? images : [images];
+
+        // Vérifier que toutes les images sont valides
+        for (const image of imageArray) {
+          if (
+            "object" !== typeof image ||
+            !image.data ||
+            !image.mimetype.includes("image")
+          ) {
+            return res.status(400).json({
+              message:
+                "Toutes les images du cadeau doivent être des images valides",
+            });
+          }
+        }
+
+        // Uploader toutes les images
+        for (let i = 0; i < imageArray.length; i++) {
+          const image = imageArray[i];
+          const eventFolder = EVENT_FOLDER_PATTERN.replace(
+            "{eventId}",
+            event._id
+          );
+          const publicId = `gift_${Date.now()}_${i}`; // ID unique pour chaque image
+          const uploadedImage = await uploadFile(image, eventFolder, publicId);
+          uploadedImages.push(uploadedImage);
+        }
       }
 
       const { name, price, url } = matchedData(req);
@@ -53,15 +77,28 @@ router.post(
         event.giftList = [];
       }
 
+      // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
+      try {
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
+        );
+        await createFolder(eventFolder);
+        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+      } catch (folderError) {
+        console.error(
+          "Erreur lors de la création du dossier Cloudinary:",
+          folderError
+        );
+        // On continue même si la création du dossier échoue
+      }
+
       // On ajoute le cadeau à la liste
       event.giftList.push({
         name,
         price,
         url,
-        image: await uploadFile(
-          image,
-          GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", event._id)
-        ),
+        images: uploadedImages,
       });
       await event.save();
 
@@ -90,18 +127,40 @@ router.put(
         });
       }
 
-      // On teste la validité de l'image ici car express-validator ne prend pas en compte les files
-      // Si l'image n'est pas renseignée, on conserve celle uploadée à la création
-      const image = req.files?.image;
-      if (
-        image &&
-        ("object" !== typeof image ||
-          !image.data ||
-          !image.mimetype.includes("image"))
-      ) {
-        return res.status(400).json({
-          message: "L'image du cadeau doit être une image valide",
-        });
+      // On teste la validité des images ici car express-validator ne prend pas en compte les files
+      // Si les images ne sont pas renseignées, on conserve celles uploadées à la création
+      const images = req.files?.images;
+      let uploadedImages = [];
+
+      if (images) {
+        // Si c'est un seul fichier, on le met dans un tableau
+        const imageArray = Array.isArray(images) ? images : [images];
+
+        // Vérifier que toutes les images sont valides
+        for (const image of imageArray) {
+          if (
+            "object" !== typeof image ||
+            !image.data ||
+            !image.mimetype.includes("image")
+          ) {
+            return res.status(400).json({
+              message:
+                "Toutes les images du cadeau doivent être des images valides",
+            });
+          }
+        }
+
+        // Uploader toutes les nouvelles images
+        for (let i = 0; i < imageArray.length; i++) {
+          const image = imageArray[i];
+          const eventFolder = EVENT_FOLDER_PATTERN.replace(
+            "{eventId}",
+            event._id
+          );
+          const publicId = `gift_${Date.now()}_${i}`; // ID unique pour chaque image
+          const uploadedImage = await uploadFile(image, eventFolder, publicId);
+          uploadedImages.push(uploadedImage);
+        }
       }
 
       const { name, price, url } = matchedData(req);
@@ -117,13 +176,15 @@ router.put(
       gift.price = price;
       gift.url = url;
 
-      // Si une nouvelle image a été uploadée, on supprime l'ancienne avant d'uploader la nouvelle
-      if (image) {
-        await destroyFile(gift.image);
-        gift.image = await uploadFile(
-          image,
-          GIFT_LIST_FOLDER_PATTERN.replace("{eventId}", event._id)
-        );
+      // Si de nouvelles images ont été uploadées, on supprime les anciennes avant d'uploader les nouvelles
+      if (images && uploadedImages.length > 0) {
+        // Supprimer les anciennes images
+        if (gift.images && gift.images.length > 0) {
+          for (const oldImage of gift.images) {
+            await destroyFile(oldImage);
+          }
+        }
+        gift.images = uploadedImages;
       }
 
       await event.save();
@@ -161,8 +222,15 @@ router.delete(
         return res.status(404).json({ message: "Cadeau introuvable" });
       }
 
-      // On supprime l'image uploadée avant de supprimer le cadeau de la liste
-      await destroyFile(event.giftList[giftIndex].image);
+      // On supprime les images uploadées avant de supprimer le cadeau de la liste
+      if (
+        event.giftList[giftIndex].images &&
+        event.giftList[giftIndex].images.length > 0
+      ) {
+        for (const image of event.giftList[giftIndex].images) {
+          await destroyFile(image);
+        }
+      }
       event.giftList.splice(giftIndex, 1);
 
       await event.save();
@@ -212,18 +280,30 @@ router.post(
         participation.wishList = [];
       }
 
+      // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
+      try {
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
+        );
+        await createFolder(eventFolder);
+        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+      } catch (folderError) {
+        console.error(
+          "Erreur lors de la création du dossier Cloudinary:",
+          folderError
+        );
+        // On continue même si la création du dossier échoue
+      }
+
       // On ajoute le cadeau à la liste
+      const eventFolder = EVENT_FOLDER_PATTERN.replace("{eventId}", event._id);
+      const publicId = `wish_${Date.now()}`; // ID unique pour l'image
       participation.wishList.push({
         name,
         price,
         url,
-        image: await uploadFile(
-          image,
-          WISH_LIST_FOLDER_PATTERN.replace("{eventId}", event._id).replace(
-            "{userId}",
-            req.user._id
-          )
-        ),
+        image: await uploadFile(image, eventFolder, publicId),
       });
       await event.save();
 
@@ -284,13 +364,12 @@ router.put(
       // Si une nouvelle image a été uploadée, on supprime l'ancienne avant d'uploader la nouvelle
       if (image) {
         await destroyFile(gift.image);
-        gift.image = await uploadFile(
-          image,
-          WISH_LIST_FOLDER_PATTERN.replace("{eventId}", event._id).replace(
-            "{userId}",
-            req.user._id
-          )
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
         );
+        const publicId = `wish_${Date.now()}`; // ID unique pour l'image
+        gift.image = await uploadFile(image, eventFolder, publicId);
       }
 
       await event.save();

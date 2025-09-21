@@ -15,6 +15,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const { setupGiftSquadFolder } = require("./services/uploadService");
+
+// Configurer le dossier racine au démarrage
+setupGiftSquadFolder();
+
 const userRoutes = require("./routes/user");
 const eventRoutes = require("./routes/event");
 
