@@ -14,10 +14,12 @@ const isParticipant = async (req, res, next) => {
     }
 
     // Vérifie si l'utilisateur connecté est bien un participant (organisateur ou participant accepté)
-    const isOrganizer = event.event_organizer._id.equals(req.user._id);
+    const isOrganizer =
+      event.event_organizer && event.event_organizer._id.equals(req.user._id);
 
     const participation = event.event_participants.find(
       (eventParticipant) =>
+        eventParticipant.user &&
         eventParticipant.user._id.equals(req.user._id) &&
         Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
     );

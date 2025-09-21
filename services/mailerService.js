@@ -39,6 +39,9 @@ const sendInvitationEmail = (event, email, user) => {
     event._id
   }/participant/decline?email=${encodeURIComponent(email)}`;
 
+  // Message différent selon si l'utilisateur a un compte ou non
+  const hasAccount = !!user;
+
   const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
   <h2 style="color: #4CAF50; text-align: center;">Invitation à ${
@@ -60,11 +63,30 @@ const sendInvitationEmail = (event, email, user) => {
       : ""
   }
   
+  ${
+    hasAccount
+      ? `
   <div style="text-align: center; margin: 30px 0;">
     <a href="${acceptLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">✅ Accepter l'invitation</a>
     
     <a href="${declineLink}" style="background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">❌ Décliner l'invitation</a>
   </div>
+  `
+      : `
+  <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0; color: #856404;"><strong>⚠️ Important :</strong> Vous n'avez pas encore de compte sur Giftsquad.</p>
+    <p style="margin: 10px 0 0 0; color: #856404;">Pour accepter cette invitation, vous devez d'abord :</p>
+    <ol style="margin: 10px 0 0 0; color: #856404;">
+      <li>Créer un compte sur l'application Giftsquad</li>
+      <li>Puis accepter l'invitation depuis la section "Invitations" de l'application</li>
+    </ol>
+  </div>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <p style="color: #666; font-size: 14px;">Une fois votre compte créé, vous pourrez accepter cette invitation directement dans l'application.</p>
+  </div>
+  `
+  }
 </div>
 `;
 
@@ -81,11 +103,25 @@ Vous avez reçu une invitation à l'événement ${
 Type d'événement : ${event.event_type}
 ${event.event_budget ? `Budget conseillé : ${event.event_budget}€` : ""}
 
+${
+  hasAccount
+    ? `
 Pour accepter l'invitation, cliquez sur ce lien :
 ${acceptLink}
 
 Pour décliner l'invitation, cliquez sur ce lien :
-${declineLink}`;
+${declineLink}
+`
+    : `
+IMPORTANT : Vous n'avez pas encore de compte sur Giftsquad.
+
+Pour accepter cette invitation, vous devez d'abord :
+1. Créer un compte sur l'application Giftsquad
+2. Puis accepter l'invitation depuis la section "Invitations" de l'application
+
+Une fois votre compte créé, vous pourrez accepter cette invitation directement dans l'application.
+`
+}`;
 
   sendMail(to, subject, text, html);
 };

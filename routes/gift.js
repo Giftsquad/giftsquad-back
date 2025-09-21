@@ -72,6 +72,11 @@ router.post(
 
       const { name, price, url } = matchedData(req);
 
+      // Vérifier que l'utilisateur est valide
+      if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: "Utilisateur invalide" });
+      }
+
       // Si la liste de cadeaux n'est pas initialisée, on l'initialise
       if (!event.giftList) {
         event.giftList = [];
@@ -297,28 +302,58 @@ router.post(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
-      if (Event.TYPES.christmas_list !== event.event_type) {
+      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
+      if (
+        Event.TYPES.christmas_list !== event.event_type &&
+        Event.TYPES.secret_santa !== event.event_type
+      ) {
         return res.status(400).json({
           message:
-            "Seuls les évènements Liste de Noël ont des listes de souhaits",
+            "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
         });
       }
 
-      // On teste la validité de l'image ici car express-validator ne prend pas en compte les files
-      const image = req.files?.image;
-      if (
-        !image ||
-        "object" !== typeof image ||
-        !image.data ||
-        !image.mimetype.includes("image")
-      ) {
-        return res.status(400).json({
-          message: "L'image du cadeau doit être une image valide",
-        });
+      // On teste la validité des images ici car express-validator ne prend pas en compte les files
+      const images = req.files?.images;
+      let uploadedImages = [];
+
+      if (images) {
+        // Si c'est un seul fichier, on le met dans un tableau
+        const imageArray = Array.isArray(images) ? images : [images];
+
+        // Vérifier que toutes les images sont valides
+        for (const image of imageArray) {
+          if (
+            "object" !== typeof image ||
+            !image.data ||
+            !image.mimetype.includes("image")
+          ) {
+            return res.status(400).json({
+              message:
+                "Toutes les images du cadeau doivent être des images valides",
+            });
+          }
+        }
+
+        // Uploader toutes les images
+        for (let i = 0; i < imageArray.length; i++) {
+          const image = imageArray[i];
+          const eventFolder = EVENT_FOLDER_PATTERN.replace(
+            "{eventId}",
+            event._id
+          );
+          const publicId = `wish_${Date.now()}_${i}`; // ID unique pour chaque image
+          const uploadedImage = await uploadFile(image, eventFolder, publicId);
+          uploadedImages.push(uploadedImage);
+        }
       }
 
       const { name, price, url } = matchedData(req);
+
+      // Vérifier que l'utilisateur est valide
+      if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: "Utilisateur invalide" });
+      }
 
       // Si la liste de souhaits n'est pas initialisée, on l'initialise
       if (!participation.wishList) {
@@ -342,13 +377,11 @@ router.post(
       }
 
       // On ajoute le cadeau à la liste
-      const eventFolder = EVENT_FOLDER_PATTERN.replace("{eventId}", event._id);
-      const publicId = `wish_${Date.now()}`; // ID unique pour l'image
       participation.wishList.push({
         name,
         price,
         url,
-        image: await uploadFile(image, eventFolder, publicId),
+        images: uploadedImages,
         addedBy: req.user._id,
       });
       await event.save();
@@ -377,26 +410,51 @@ router.put(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
-      if (Event.TYPES.christmas_list !== event.event_type) {
+      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
+      if (
+        Event.TYPES.christmas_list !== event.event_type &&
+        Event.TYPES.secret_santa !== event.event_type
+      ) {
         return res.status(400).json({
           message:
-            "Seuls les évènements Liste de Noël ont des listes de souhaits",
+            "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
         });
       }
 
-      // On teste la validité de l'image ici car express-validator ne prend pas en compte les files
-      // Si l'image n'est pas renseignée, on conserve celle uploadée à la création
-      const image = req.files?.image;
-      if (
-        image &&
-        ("object" !== typeof image ||
-          !image.data ||
-          !image.mimetype.includes("image"))
-      ) {
-        return res.status(400).json({
-          message: "L'image du cadeau doit être une image valide",
-        });
+      // On teste la validité des images ici car express-validator ne prend pas en compte les files
+      // Si les images ne sont pas renseignées, on conserve celles uploadées à la création
+      const images = req.files?.images;
+      let uploadedImages = [];
+
+      if (images) {
+        // Si c'est un seul fichier, on le met dans un tableau
+        const imageArray = Array.isArray(images) ? images : [images];
+
+        // Vérifier que toutes les images sont valides
+        for (const image of imageArray) {
+          if (
+            "object" !== typeof image ||
+            !image.data ||
+            !image.mimetype.includes("image")
+          ) {
+            return res.status(400).json({
+              message:
+                "Toutes les images du cadeau doivent être des images valides",
+            });
+          }
+        }
+
+        // Uploader toutes les nouvelles images
+        for (let i = 0; i < imageArray.length; i++) {
+          const image = imageArray[i];
+          const eventFolder = EVENT_FOLDER_PATTERN.replace(
+            "{eventId}",
+            event._id
+          );
+          const publicId = `wish_${Date.now()}_${i}`; // ID unique pour chaque image
+          const uploadedImage = await uploadFile(image, eventFolder, publicId);
+          uploadedImages.push(uploadedImage);
+        }
       }
 
       const { name, price, url } = matchedData(req);
@@ -414,15 +472,15 @@ router.put(
       gift.price = price;
       gift.url = url;
 
-      // Si une nouvelle image a été uploadée, on supprime l'ancienne avant d'uploader la nouvelle
-      if (image) {
-        await destroyFile(gift.image);
-        const eventFolder = EVENT_FOLDER_PATTERN.replace(
-          "{eventId}",
-          event._id
-        );
-        const publicId = `wish_${Date.now()}`; // ID unique pour l'image
-        gift.image = await uploadFile(image, eventFolder, publicId);
+      // Si de nouvelles images ont été uploadées, on supprime les anciennes avant d'uploader les nouvelles
+      if (images && uploadedImages.length > 0) {
+        // Supprimer les anciennes images
+        if (gift.images && gift.images.length > 0) {
+          for (const oldImage of gift.images) {
+            await destroyFile(oldImage);
+          }
+        }
+        gift.images = uploadedImages;
       }
 
       await event.save();
@@ -449,11 +507,14 @@ router.delete(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
-      if (Event.TYPES.christmas_list !== event.event_type) {
+      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
+      if (
+        Event.TYPES.christmas_list !== event.event_type &&
+        Event.TYPES.secret_santa !== event.event_type
+      ) {
         return res.status(400).json({
           message:
-            "Seuls les évènements Liste de Noël ont des listes de souhaits",
+            "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
         });
       }
 
@@ -502,11 +563,14 @@ router.put(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
-      if (Event.TYPES.christmas_list !== event.event_type) {
+      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
+      if (
+        Event.TYPES.christmas_list !== event.event_type &&
+        Event.TYPES.secret_santa !== event.event_type
+      ) {
         return res.status(400).json({
           message:
-            "Seuls les évènements Liste de Noël ont des listes de souhaits",
+            "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
         });
       }
 
@@ -599,6 +663,11 @@ router.post(
       }
 
       const { name, price, url } = matchedData(req);
+
+      // Vérifier que l'utilisateur est valide
+      if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: "Utilisateur invalide" });
+      }
 
       // Si la liste de cadeaux n'est pas initialisée, on l'initialise
       if (!event.giftList) {

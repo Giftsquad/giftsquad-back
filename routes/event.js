@@ -321,9 +321,10 @@ router.post(
           .json({ message: "L'utilisateur participe déjà à cet évènement." });
       }
 
-      // On ajoute le participant à la liste
-      // Si l'utilisateur a un compte, on le lie à l'évènement
+      // Vérifier si l'utilisateur existe dans la base de données
       const user = await User.findOne({ email });
+
+      // On ajoute le participant à la liste
       event.event_participants.push({
         user: user ? user : null,
         email,
@@ -343,7 +344,23 @@ router.post(
       // On envoie un email pour notifier l'utilisateur
       sendInvitationEmail(event, email, user);
 
-      res.status(200).json(event);
+      // Retourner une réponse différente selon si l'utilisateur a un compte ou non
+      if (user) {
+        res.status(200).json({
+          success: true,
+          message: "Invitation envoyée avec succès",
+          userExists: true,
+          event: event,
+        });
+      } else {
+        res.status(200).json({
+          success: true,
+          message:
+            "Invitation envoyée. L'utilisateur devra créer un compte pour accepter l'invitation.",
+          userExists: false,
+          event: event,
+        });
+      }
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

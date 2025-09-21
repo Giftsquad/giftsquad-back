@@ -13,8 +13,11 @@ const isAdmin = async (req, res, next) => {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
-    // Vérifie si l'utilisateur connecté est bien l’organisateur
-    if (!event.event_organizer._id.equals(req.user._id)) {
+    // Vérifie si l'utilisateur connecté est bien l'organisateur
+    if (
+      !event.event_organizer ||
+      !event.event_organizer._id.equals(req.user._id)
+    ) {
       return res.status(403).json({
         message:
           "Unauthorized: Seul l'organisateur peut effectuer cette action",
