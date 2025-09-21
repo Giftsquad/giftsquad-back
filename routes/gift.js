@@ -467,8 +467,15 @@ router.delete(
         return res.status(404).json({ message: "Cadeau introuvable" });
       }
 
-      // On supprime l'image uploadée avant de supprimer le cadeau de la liste
-      await destroyFile(participation.wishList[giftIndex].image);
+      // On supprime les images uploadées avant de supprimer le cadeau de la liste
+      if (
+        participation.wishList[giftIndex].images &&
+        participation.wishList[giftIndex].images.length > 0
+      ) {
+        for (const image of participation.wishList[giftIndex].images) {
+          await destroyFile(image);
+        }
+      }
       participation.wishList.splice(giftIndex, 1);
 
       await event.save();
@@ -701,6 +708,13 @@ router.delete("/gift/:giftId", isAuthenticated, async (req, res) => {
         message:
           "Vous n'êtes pas autorisé à supprimer ce cadeau. Seul l'organisateur ou l'auteur du cadeau peut le faire.",
       });
+    }
+
+    // Supprimer les images du cadeau avant de le supprimer de la base de données
+    if (giftToDelete && giftToDelete.images && giftToDelete.images.length > 0) {
+      for (const image of giftToDelete.images) {
+        await destroyFile(image);
+      }
     }
 
     // Supprimer le cadeau
