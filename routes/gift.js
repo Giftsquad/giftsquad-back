@@ -99,10 +99,18 @@ router.post(
         price,
         url,
         images: uploadedImages,
+        addedBy: req.user._id,
       });
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -189,7 +197,14 @@ router.put(
 
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -235,7 +250,14 @@ router.delete(
 
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -304,10 +326,18 @@ router.post(
         price,
         url,
         image: await uploadFile(image, eventFolder, publicId),
+        addedBy: req.user._id,
       });
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -374,7 +404,14 @@ router.put(
 
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -413,7 +450,14 @@ router.delete(
 
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -457,7 +501,14 @@ router.put(
 
       await event.save();
 
-      res.status(200).json(event);
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("giftList.addedBy");
+
+      res.status(200).json(populatedEvent);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

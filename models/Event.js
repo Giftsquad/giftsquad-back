@@ -45,6 +45,12 @@ const giftSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  // Qui a ajouté ce cadeau
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   // Rajouter status {planned: "planned", purchased: "purchased"} si on veut dire que tel cadeau est sélectionné pour la liste d'anniversaire
   // Rajouter priority {low: "low", medium: "medium", high: "high"} ou Number (avec 0 = low, 100 = high) si on veut hierarchiser les cadeaux
   createdAt: {

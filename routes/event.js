@@ -88,7 +88,9 @@ router.get("", isAuthenticated, async (req, res) => {
       },
     })
       .populate("event_organizer")
-      .populate("event_participants.user");
+      .populate("event_participants.user")
+      .populate("event_participants.wishList.addedBy")
+      .populate("giftList.addedBy");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -124,6 +126,8 @@ router.get("/:id", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.purchasedBy")
+      .populate("event_participants.wishList.addedBy")
+      .populate("giftList.addedBy")
       .populate("event_participants.assignedTo")
       .populate("event_participants.assignedBy");
 
