@@ -22,9 +22,11 @@ setupGiftSquadFolder();
 
 const userRoutes = require("./routes/user");
 const eventRoutes = require("./routes/event");
+const giftRoutes = require("./routes/gift");
 
 app.use("/user", userRoutes);
 app.use("/event", eventRoutes);
+app.use("/gifts", giftRoutes);
 
 app.get("/", (req, res) => {
   try {

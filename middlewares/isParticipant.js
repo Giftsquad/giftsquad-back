@@ -13,19 +13,17 @@ const isParticipant = async (req, res, next) => {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
-    // Vérifie si l'utilisateur connecté est bien un participant
-    if (!event.event_organizer._id.equals(req.user._id)) {
-      return res.status(403).json({
-        message: "Forbidden: Seul l'organisateur peut effectuer cette action",
-      });
-    }
+    // Vérifie si l'utilisateur connecté est bien un participant (organisateur ou participant accepté)
+    const isOrganizer = event.event_organizer._id.equals(req.user._id);
 
     const participation = event.event_participants.find(
       (eventParticipant) =>
-        eventParticipant.email.toLowerCase() === req.user.email.toLowerCase() &&
+        eventParticipant.user._id.equals(req.user._id) &&
         Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
     );
-    if (!participation) {
+
+    // L'utilisateur doit être soit l'organisateur, soit un participant accepté
+    if (!isOrganizer && !participation) {
       return res
         .status(403)
         .json({ message: "Forbidden: Ne participe pas à l'évènement" });

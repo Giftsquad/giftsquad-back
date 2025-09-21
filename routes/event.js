@@ -141,6 +141,147 @@ router.get("/:id", isAuthenticated, async (req, res) => {
   }
 });
 
+// Récupération de l'événement complet avec ses cadeaux
+router.get("/:id/event", isAuthenticated, isParticipant, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+
+    const event = await Event.findById(eventId)
+      .populate("event_participants.user")
+      .populate("event_participants.wishList.addedBy")
+      .populate("giftList.addedBy");
+
+    if (!event) {
+      return res.status(404).json({ message: "Événement introuvable." });
+    }
+
+    // Vérifier si l'utilisateur est un participant de l'événement
+    const isUserParticipant = event.event_participants.some(
+      (participant) =>
+        participant.user && participant.user._id.toString() === userId
+    );
+
+    if (!isUserParticipant) {
+      return res.status(403).json({
+        message: "Accès refusé. Vous n'êtes pas participant de cet événement.",
+      });
+    }
+
+    // Collecter tous les cadeaux de l'événement
+    const allGifts = [];
+
+    // Ajouter les cadeaux de la giftList de l'événement
+    if (event.giftList && event.giftList.length > 0) {
+      event.giftList.forEach((gift) => {
+        allGifts.push({
+          ...gift.toObject(),
+          source: "giftList",
+          eventId: event._id,
+          eventName: event.event_name,
+          addedByParticipantName: gift.addedBy
+            ? gift.addedBy.username
+            : "Inconnu",
+        });
+      });
+    }
+
+    // Ajouter les cadeaux des wishLists des participants
+    if (event.event_participants && event.event_participants.length > 0) {
+      event.event_participants.forEach((participant) => {
+        if (participant.wishList && participant.wishList.length > 0) {
+          participant.wishList.forEach((gift) => {
+            allGifts.push({
+              ...gift.toObject(),
+              source: "wishList",
+              eventId: event._id,
+              eventName: event.event_name,
+              addedByParticipantName: participant.user
+                ? participant.user.username
+                : "Inconnu",
+            });
+          });
+        }
+      });
+    }
+
+    // Retourner l'événement complet avec ses cadeaux
+    res.status(200).json({
+      event: event,
+      gifts: allGifts,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'événement:", error);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
+// Récupération de tous les cadeaux d'un événement
+router.get("/:id/gifts", isAuthenticated, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+
+    // Vérifier que l'utilisateur est participant de cet événement
+    const event = await Event.findOne({
+      _id: eventId,
+      "event_participants.user": userId,
+    })
+      .populate("event_organizer")
+      .populate("event_participants.user")
+      .populate("event_participants.wishList.addedBy")
+      .populate("giftList.addedBy");
+
+    if (!event) {
+      return res.status(404).json({ message: "Événement non trouvé." });
+    }
+
+    // Collecter tous les cadeaux de l'événement
+    const allGifts = [];
+
+    // Ajouter les cadeaux de la giftList
+    if (event.giftList && event.giftList.length > 0) {
+      event.giftList.forEach((gift) => {
+        allGifts.push({
+          ...gift.toObject(),
+          source: "giftList",
+          eventId: event._id,
+          eventName: event.event_name,
+        });
+      });
+    }
+
+    // Ajouter les cadeaux des wishList des participants
+    if (event.event_participants && event.event_participants.length > 0) {
+      event.event_participants.forEach((participant) => {
+        if (participant.wishList && participant.wishList.length > 0) {
+          participant.wishList.forEach((gift) => {
+            allGifts.push({
+              ...gift.toObject(),
+              source: "wishList",
+              participantName: participant.user?.firstname || participant.email,
+              eventId: event._id,
+              eventName: event.event_name,
+            });
+          });
+        }
+      });
+    }
+
+    res.status(200).json({
+      event: {
+        _id: event._id,
+        event_name: event.event_name,
+        event_type: event.event_type,
+      },
+      gifts: allGifts,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des cadeaux:", error);
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
 //Update Event
 router.put("/event/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
