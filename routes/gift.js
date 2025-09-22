@@ -2,7 +2,10 @@ const express = require("express");
 const fileUpload = require("express-fileupload");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
-const { eventGiftValidators } = require("../validation/Event");
+const {
+  eventGiftValidators,
+  eventWishValidators,
+} = require("../validation/Event");
 const { matchedData } = require("express-validator");
 const Event = require("../models/Event");
 const {
@@ -298,15 +301,13 @@ router.post(
   isAuthenticated,
   isParticipant,
   fileUpload(),
-  eventGiftValidators,
+  eventWishValidators,
   async (req, res) => {
+    console.log("Wish List");
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
-      if (
-        Event.TYPES.christmas_list !== event.event_type &&
-        Event.TYPES.secret_santa !== event.event_type
-      ) {
+      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
+      if (Event.TYPES.christmas_list !== event.event_type) {
         return res.status(400).json({
           message:
             "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
@@ -315,7 +316,7 @@ router.post(
 
       // On teste la validité des images ici car express-validator ne prend pas en compte les files
       const images = req.files?.images;
-      let uploadedImages = [];
+      const uploadedImages = [];
 
       if (images) {
         // Si c'est un seul fichier, on le met dans un tableau
@@ -335,6 +336,7 @@ router.post(
           }
         }
 
+        console.log("before upload");
         // Uploader toutes les images
         for (let i = 0; i < imageArray.length; i++) {
           const image = imageArray[i];
@@ -347,8 +349,9 @@ router.post(
           uploadedImages.push(uploadedImage);
         }
       }
+      console.log("uploaded");
 
-      const { name, price, url } = matchedData(req);
+      const { name, url, description } = matchedData(req);
 
       // Vérifier que l'utilisateur est valide
       if (!req.user || !req.user._id) {
@@ -379,8 +382,8 @@ router.post(
       // On ajoute le cadeau à la liste
       participation.wishList.push({
         name,
-        price,
         url,
+        description,
         images: uploadedImages,
         addedBy: req.user._id,
       });
@@ -406,15 +409,12 @@ router.put(
   isAuthenticated,
   isParticipant,
   fileUpload(),
-  eventGiftValidators,
+  eventWishValidators,
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
-      if (
-        Event.TYPES.christmas_list !== event.event_type &&
-        Event.TYPES.secret_santa !== event.event_type
-      ) {
+      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
+      if (Event.TYPES.christmas_list !== event.event_type) {
         return res.status(400).json({
           message:
             "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
@@ -457,7 +457,7 @@ router.put(
         }
       }
 
-      const { name, price, url } = matchedData(req);
+      const { name, url, description } = matchedData(req);
       const { giftId } = req.params;
 
       // On cherche le cadeau dans la liste et on met à jour ses données
@@ -469,8 +469,8 @@ router.put(
       }
 
       gift.name = name;
-      gift.price = price;
       gift.url = url;
+      gift.description = description;
 
       // Si de nouvelles images ont été uploadées, on supprime les anciennes avant d'uploader les nouvelles
       if (images && uploadedImages.length > 0) {
@@ -507,11 +507,8 @@ router.delete(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
-      if (
-        Event.TYPES.christmas_list !== event.event_type &&
-        Event.TYPES.secret_santa !== event.event_type
-      ) {
+      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
+      if (Event.TYPES.christmas_list !== event.event_type) {
         return res.status(400).json({
           message:
             "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
@@ -563,11 +560,8 @@ router.put(
   async (req, res) => {
     try {
       const { event, participation } = req;
-      // Si ce n'est pas une Liste de Noël ou un Secret Santa, il n'y a pas de liste de souhaits
-      if (
-        Event.TYPES.christmas_list !== event.event_type &&
-        Event.TYPES.secret_santa !== event.event_type
-      ) {
+      // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
+      if (Event.TYPES.christmas_list !== event.event_type) {
         return res.status(400).json({
           message:
             "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
