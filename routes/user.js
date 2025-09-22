@@ -259,6 +259,29 @@ const getShowableUserWithEvents = (user) => {
     return null;
   }
 
+  // Filtrer les événements pour ne garder que ceux où l'utilisateur a le statut 'accepted'
+  const acceptedEvents = (user.events || []).filter((event) => {
+    // Vérifier si l'utilisateur est l'organisateur (toujours accepté)
+    const isOrganizer = event.event_participants?.some(
+      (participant) =>
+        participant.user?._id?.toString() === user._id.toString() &&
+        participant.role === "organizer"
+    );
+
+    if (isOrganizer) {
+      return true;
+    }
+
+    // Vérifier si l'utilisateur est un participant avec le statut 'accepted'
+    const isAcceptedParticipant = event.event_participants?.some(
+      (participant) =>
+        participant.user?._id?.toString() === user._id.toString() &&
+        participant.status === "accepted"
+    );
+
+    return isAcceptedParticipant;
+  });
+
   return {
     _id: user._id,
     token: user.token,
@@ -266,6 +289,6 @@ const getShowableUserWithEvents = (user) => {
     lastname: user.lastname,
     nickname: user.nickname,
     email: user.email,
-    events: user.events || [],
+    events: acceptedEvents,
   };
 };

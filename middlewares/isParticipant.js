@@ -13,7 +13,7 @@ const isParticipant = async (req, res, next) => {
       return res.status(404).json({ message: "Evènement introuvable" });
     }
 
-    // Vérifie si l'utilisateur connecté est bien un participant (organisateur ou participant accepté)
+    // Vérifie si l'utilisateur connecté est bien un participant (organisateur ou participant accepté/invité)
     const isOrganizer =
       event.event_organizer && event.event_organizer._id.equals(req.user._id);
 
@@ -21,10 +21,11 @@ const isParticipant = async (req, res, next) => {
       (eventParticipant) =>
         eventParticipant.user &&
         eventParticipant.user._id.equals(req.user._id) &&
-        Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
+        (Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status ||
+          Event.PARTICIPANT_STATUSES.invited === eventParticipant.status)
     );
 
-    // L'utilisateur doit être soit l'organisateur, soit un participant accepté
+    // L'utilisateur doit être soit l'organisateur, soit un participant (accepté ou invité)
     if (!isOrganizer && !participation) {
       return res
         .status(403)
