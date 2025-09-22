@@ -24,7 +24,7 @@ const eventCreateValidators = [
     .isAfter(new Date().toISOString())
     .withMessage("La date doit être ultérieure à aujourd'hui"),
   body("budget")
-    .optional()
+    .optional({ values: "falsy" })
     .isFloat({ min: 0 })
     .withMessage("Le budget recommandé doit être un montant supérieur à 0")
     .custom((budget, { req }) => {
@@ -61,9 +61,37 @@ const eventGiftValidators = [
     .isFloat({ min: 0 })
     .withMessage("Le prix doit être un montant supérieur à 0"),
   body("url")
-    .optional({ checkFalsy: true }) // <-- url n'est pas obligatoire
+    .optional({ values: "falsy" })
+    .trim()
     .isURL()
     .withMessage("Lien vers le produit invalide"),
+  body("images")
+    .optional()
+    .isArray()
+    .withMessage("Les images doivent être un tableau"),
+  body("images.*")
+    .optional()
+    .isObject()
+    .withMessage("Chaque image doit être un objet valide"),
+  handleValidationErrors,
+];
+
+const eventWishValidators = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .isLength({ min: 2, max: 30 })
+    .withMessage("Le nom doit faire entre 2 et 30 caractères"),
+  body("url")
+    .optional({ values: "falsy" })
+    .trim()
+    .isURL()
+    .withMessage("Lien vers le produit invalide"),
+  body("description")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ min: 10 })
+    .withMessage("La description doit faire au moins 10 caractères"),
   body("images")
     .optional()
     .isArray()
@@ -79,5 +107,6 @@ module.exports = {
   eventCreateValidators,
   eventAddParticipantValidators,
   eventGiftValidators,
+  eventWishValidators,
   eventParticipationValidators,
 };
