@@ -116,7 +116,9 @@ router.post(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -210,7 +212,9 @@ router.put(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -287,7 +291,9 @@ router.delete("/:id/gift-list/:giftId", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
 
     res.status(200).json(populatedEvent);
   } catch (error) {
@@ -394,7 +400,9 @@ router.post(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -490,7 +498,9 @@ router.put(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -543,7 +553,9 @@ router.delete(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -585,7 +597,7 @@ router.put(
         });
       }
       // On associe l'utilisateur au cadeau
-      gift.purchasedBy = req.user;
+      gift.purchasedBy = req.user._id;
 
       await event.save();
 
@@ -594,7 +606,60 @@ router.put(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
+
+      res.status(200).json(populatedEvent);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Déclarer s'occuper d'un cadeau de la giftList (pour les anniversaires)
+router.put(
+  "/:id/gift-list/:giftId/purchase",
+  isAuthenticated,
+  isParticipant,
+  async (req, res) => {
+    try {
+      const event = req.event;
+      // Si ce n'est pas une Liste d'anniversaire, il n'y a pas de liste de cadeaux
+      if (Event.TYPES.birthday !== event.event_type) {
+        return res.status(400).json({
+          message:
+            "Seuls les évènements Listes d'anniversaire ont une liste de cadeaux",
+        });
+      }
+
+      const { giftId } = req.params;
+
+      // On cherche le cadeau dans la liste
+      const gift = event.giftList?.find((gift) => gift._id.equals(giftId));
+      if (!gift) {
+        return res.status(404).json({ message: "Cadeau introuvable" });
+      }
+
+      // Si quelqu'un s'occupe déjà du cadeau, on renvoie une erreur
+      if (gift.purchasedBy) {
+        return res.status(409).json({
+          message: "Il y a déjà une personne qui s'occupe de ce cadeau",
+        });
+      }
+      // On associe l'utilisateur au cadeau
+      gift.purchasedBy = req.user._id;
+
+      await event.save();
+
+      // Récupérer l'événement avec les données populées
+      const populatedEvent = await Event.findById(event._id)
+        .populate("event_organizer")
+        .populate("event_participants.user")
+        .populate("event_participants.wishList.addedBy")
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -699,7 +764,9 @@ router.post(
         .populate("event_organizer")
         .populate("event_participants.user")
         .populate("event_participants.wishList.addedBy")
-        .populate("giftList.addedBy");
+        .populate("event_participants.wishList.purchasedBy")
+        .populate("giftList.addedBy")
+        .populate("giftList.purchasedBy");
 
       res.status(200).json(populatedEvent);
     } catch (error) {
@@ -724,7 +791,9 @@ router.delete("/gift/:giftId", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
 
     if (!event) {
       return res.status(404).json({ message: "Cadeau introuvable" });
@@ -802,7 +871,9 @@ router.delete("/gift/:giftId", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
 
     res.status(200).json({
       message: "Cadeau supprimé avec succès.",

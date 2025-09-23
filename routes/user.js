@@ -171,7 +171,15 @@ router.get("/me/events", isAuthenticated, async (req, res) => {
           select: "firstname lastname nickname email",
         },
         {
+          path: "event_participants.wishList.purchasedBy",
+          select: "firstname lastname nickname email",
+        },
+        {
           path: "giftList.addedBy",
+          select: "firstname lastname nickname email",
+        },
+        {
+          path: "giftList.purchasedBy",
           select: "firstname lastname nickname email",
         },
       ],

@@ -90,7 +90,9 @@ router.get("", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -150,7 +152,9 @@ router.get("/:id/event", isAuthenticated, isParticipant, async (req, res) => {
     const event = await Event.findById(eventId)
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
 
     if (!event) {
       return res.status(404).json({ message: "Événement introuvable." });
@@ -230,7 +234,9 @@ router.get("/:id/gifts", isAuthenticated, async (req, res) => {
       .populate("event_organizer")
       .populate("event_participants.user")
       .populate("event_participants.wishList.addedBy")
-      .populate("giftList.addedBy");
+      .populate("event_participants.wishList.purchasedBy")
+      .populate("giftList.addedBy")
+      .populate("giftList.purchasedBy");
 
     if (!event) {
       return res.status(404).json({ message: "Événement non trouvé." });
