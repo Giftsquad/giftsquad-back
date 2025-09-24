@@ -92,7 +92,7 @@ router.post(
           event._id
         );
         await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        // console.log(`Dossier Cloudinary créé: ${eventFolder}`);
       } catch (folderError) {
         console.error(
           "Erreur lors de la création du dossier Cloudinary:",
@@ -309,7 +309,7 @@ router.post(
   fileUpload(),
   eventWishValidators,
   async (req, res) => {
-    console.log("Wish List");
+    // console.log("Wish List");
     try {
       const { event, participation } = req;
       // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
@@ -342,7 +342,7 @@ router.post(
           }
         }
 
-        console.log("before upload");
+        // console.log("before upload");
         // Uploader toutes les images
         for (let i = 0; i < imageArray.length; i++) {
           const image = imageArray[i];
@@ -355,7 +355,7 @@ router.post(
           uploadedImages.push(uploadedImage);
         }
       }
-      console.log("uploaded");
+      // console.log("uploaded");
 
       const { name, url, description } = matchedData(req);
 
@@ -376,7 +376,7 @@ router.post(
           event._id
         );
         await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        // console.log(`Dossier Cloudinary créé: ${eventFolder}`);
       } catch (folderError) {
         console.error(
           "Erreur lors de la création du dossier Cloudinary:",
@@ -740,7 +740,7 @@ router.post(
           event._id
         );
         await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        // console.log(`Dossier Cloudinary créé: ${eventFolder}`);
       } catch (folderError) {
         console.error(
           "Erreur lors de la création du dossier Cloudinary:",

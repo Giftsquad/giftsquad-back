@@ -71,7 +71,7 @@ const destroyFolder = async (folder) => {
   } catch (error) {
     // Si le dossier n'existe pas, on ignore l'erreur
     if (error.http_code === 404) {
-      console.log(`Dossier ${folder} n'existe pas, suppression ignorée`);
+      // console.log(`Dossier ${folder} n'existe pas, suppression ignorée`);
       return;
     }
     throw error;
@@ -87,22 +87,22 @@ const setupGiftSquadFolder = async () => {
     const foldersResponse = await cloudinary.api.sub_folders("");
     const existingFolders = foldersResponse.folders.map((f) => f.name);
 
-    console.log("Dossiers trouvés à la racine :", existingFolders);
+    // console.log("Dossiers trouvés à la racine :", existingFolders);
 
     // 2. Vérifier si le dossier "giftsquad" existe
     const giftsquadExists = existingFolders.includes(targetFolder);
 
     if (!giftsquadExists) {
-      console.log(`Le dossier "${targetFolder}" n'existe pas. Création...`);
+      // console.log(`Le dossier "${targetFolder}" n'existe pas. Création...`);
       await cloudinary.api.create_folder(targetFolder);
     } else {
-      console.log(`Le dossier "${targetFolder}" existe déjà.`);
+      // console.log(`Le dossier "${targetFolder}" existe déjà.`);
     }
 
     // 3. Supprimer tous les autres dossiers
     for (const folder of existingFolders) {
       if (folder !== targetFolder) {
-        console.log(`Suppression du dossier "${folder}"...`);
+        // console.log(`Suppression du dossier "${folder}"...`);
 
         // Supprime d'abord les fichiers du dossier
         await cloudinary.api.delete_resources_by_prefix(folder);
@@ -110,11 +110,11 @@ const setupGiftSquadFolder = async () => {
         // Supprime ensuite le dossier
         await cloudinary.api.delete_folder(folder);
 
-        console.log(`Dossier "${folder}" supprimé.`);
+        // console.log(`Dossier "${folder}" supprimé.`);
       }
     }
 
-    console.log(`Le dossier "${targetFolder}" est prêt à être utilisé.`);
+    // console.log(`Le dossier "${targetFolder}" est prêt à être utilisé.`);
   } catch (error) {
     console.error(
       "Erreur lors de la gestion des dossiers Cloudinary :",

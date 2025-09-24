@@ -54,9 +54,9 @@ router.post(
           newEvent._id
         );
         await createFolder(eventFolder);
-        console.log(
-          `Dossier Cloudinary créé pour l'événement ${newEvent._id}: ${eventFolder}`
-        );
+        // console.log(
+        //   `Dossier Cloudinary créé pour l'événement ${newEvent._id}: ${eventFolder}`
+        // );
       } catch (folderError) {
         console.error(
           "Erreur lors de la création du dossier Cloudinary:",

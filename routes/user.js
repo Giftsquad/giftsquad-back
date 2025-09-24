@@ -56,9 +56,9 @@ const linkUserToPendingEvents = async (user) => {
 
       await user.save();
 
-      console.log(
-        `Utilisateur ${user.email} lié à ${eventsWithPendingInvitations.length} événement(s) en attente`
-      );
+      // console.log(
+      //   `Utilisateur ${user.email} lié à ${eventsWithPendingInvitations.length} événement(s) en attente`
+      // );
     }
 
     return eventsWithPendingInvitations.length;
@@ -104,9 +104,9 @@ router.post("/signup", userSignupValidators, async (req, res) => {
     // Lier automatiquement l'utilisateur aux événements en attente
     try {
       const linkedEventsCount = await linkUserToPendingEvents(newUser);
-      console.log(
-        `Nouvel utilisateur ${email} lié à ${linkedEventsCount} événement(s) en attente`
-      );
+      // console.log(
+      //   `Nouvel utilisateur ${email} lié à ${linkedEventsCount} événement(s) en attente`
+      // );
     } catch (error) {
       console.error(
         "Erreur lors de la liaison automatique des événements:",
