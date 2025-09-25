@@ -21,7 +21,7 @@ const eventCreateValidators = [
     .notEmpty()
     .isDate()
     .withMessage("La date doit être valide")
-    .isAfter(new Date().toISOString())
+    .isAfter(new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
     .withMessage("La date doit être ultérieure à aujourd'hui"),
   body("budget")
     .optional({ values: "falsy" })
