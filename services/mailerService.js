@@ -42,6 +42,12 @@ const sendInvitationEmail = (event, email, user) => {
   // Message différent selon si l'utilisateur a un compte ou non
   const hasAccount = !!user;
 
+  const eventTypeMapping = {
+    secret_santa: "Secret Santa",
+    birthday: "Birthday",
+    christmas_list: "Christmas List",
+  };
+
   const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
   <h2 style="color: #4CAF50; text-align: center;">Invitation à ${
@@ -56,7 +62,8 @@ const sendInvitationEmail = (event, email, user) => {
     "fr-FR"
   )}.</p>
   
-  <p><strong>Type d'événement :</strong> ${event.event_type}</p>
+  <p><strong>Type d'événement :</strong>
+  ${eventTypeMapping[event.event_type] ?? "Inconnu"}</p>
   ${
     event.event_budget
       ? `<p><strong>Budget conseillé :</strong> ${event.event_budget}€</p>`
@@ -100,7 +107,7 @@ Vous avez reçu une invitation à l'événement ${
     event.event_name
   } qui aura lieu le ${new Date(event.event_date).toLocaleDateString("fr-FR")}.
 
-Type d'événement : ${event.event_type}
+Type d'événement : ${eventTypeMapping[event.event_type] ?? "Inconnu"}
 ${event.event_budget ? `Budget conseillé : ${event.event_budget}€` : ""}
 
 ${

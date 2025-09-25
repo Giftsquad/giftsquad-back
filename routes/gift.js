@@ -60,13 +60,25 @@ router.post(
           }
         }
 
+        // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
+        );
+        try {
+          await createFolder(eventFolder);
+          console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        } catch (folderError) {
+          console.error(
+            "Erreur lors de la création du dossier Cloudinary:",
+            folderError
+          );
+          // On continue même si la création du dossier échoue
+        }
+
         // Uploader toutes les images
         for (let i = 0; i < imageArray.length; i++) {
           const image = imageArray[i];
-          const eventFolder = EVENT_FOLDER_PATTERN.replace(
-            "{eventId}",
-            event._id
-          );
           const publicId = `gift_${Date.now()}_${i}`; // ID unique pour chaque image
           const uploadedImage = await uploadFile(image, eventFolder, publicId);
           uploadedImages.push(uploadedImage);
@@ -83,22 +95,6 @@ router.post(
       // Si la liste de cadeaux n'est pas initialisée, on l'initialise
       if (!event.giftList) {
         event.giftList = [];
-      }
-
-      // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
-      try {
-        const eventFolder = EVENT_FOLDER_PATTERN.replace(
-          "{eventId}",
-          event._id
-        );
-        await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
-      } catch (folderError) {
-        console.error(
-          "Erreur lors de la création du dossier Cloudinary:",
-          folderError
-        );
-        // On continue même si la création du dossier échoue
       }
 
       // On ajoute le cadeau à la liste
@@ -309,7 +305,6 @@ router.post(
   fileUpload(),
   eventWishValidators,
   async (req, res) => {
-    console.log("Wish List");
     try {
       const { event, participation } = req;
       // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
@@ -342,20 +337,30 @@ router.post(
           }
         }
 
-        console.log("before upload");
+        // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
+        );
+        try {
+          await createFolder(eventFolder);
+          console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        } catch (folderError) {
+          console.error(
+            "Erreur lors de la création du dossier Cloudinary:",
+            folderError
+          );
+          // On continue même si la création du dossier échoue
+        }
+
         // Uploader toutes les images
         for (let i = 0; i < imageArray.length; i++) {
           const image = imageArray[i];
-          const eventFolder = EVENT_FOLDER_PATTERN.replace(
-            "{eventId}",
-            event._id
-          );
           const publicId = `wish_${Date.now()}_${i}`; // ID unique pour chaque image
           const uploadedImage = await uploadFile(image, eventFolder, publicId);
           uploadedImages.push(uploadedImage);
         }
       }
-      console.log("uploaded");
 
       const { name, url, description } = matchedData(req);
 
@@ -367,22 +372,6 @@ router.post(
       // Si la liste de souhaits n'est pas initialisée, on l'initialise
       if (!participation.wishList) {
         participation.wishList = [];
-      }
-
-      // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
-      try {
-        const eventFolder = EVENT_FOLDER_PATTERN.replace(
-          "{eventId}",
-          event._id
-        );
-        await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
-      } catch (folderError) {
-        console.error(
-          "Erreur lors de la création du dossier Cloudinary:",
-          folderError
-        );
-        // On continue même si la création du dossier échoue
       }
 
       // On ajoute le cadeau à la liste
@@ -584,7 +573,7 @@ router.put(
       const participation = event.event_participants.find((eventParticipant) =>
         eventParticipant.user?._id.equals(participantUserId)
       );
-      console.log(participantUserId, giftId, participation.wishList);
+
       // On cherche le cadeau dans la liste
       const gift = participation.wishList?.find((gift) =>
         gift._id.equals(giftId)
@@ -711,13 +700,25 @@ router.post(
           }
         }
 
+        // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
+        const eventFolder = EVENT_FOLDER_PATTERN.replace(
+          "{eventId}",
+          event._id
+        );
+        try {
+          await createFolder(eventFolder);
+          console.log(`Dossier Cloudinary créé: ${eventFolder}`);
+        } catch (folderError) {
+          console.error(
+            "Erreur lors de la création du dossier Cloudinary:",
+            folderError
+          );
+          // On continue même si la création du dossier échoue
+        }
+
         // Uploader toutes les images
         for (let i = 0; i < imageArray.length; i++) {
           const image = imageArray[i];
-          const eventFolder = EVENT_FOLDER_PATTERN.replace(
-            "{eventId}",
-            event._id
-          );
           const publicId = `gift_${Date.now()}_${i}`; // ID unique pour chaque image
           const uploadedImage = await uploadFile(image, eventFolder, publicId);
           uploadedImages.push(uploadedImage);
@@ -734,22 +735,6 @@ router.post(
       // Si la liste de cadeaux n'est pas initialisée, on l'initialise
       if (!event.giftList) {
         event.giftList = [];
-      }
-
-      // Créer le dossier Cloudinary pour cet événement s'il n'existe pas
-      try {
-        const eventFolder = EVENT_FOLDER_PATTERN.replace(
-          "{eventId}",
-          event._id
-        );
-        await createFolder(eventFolder);
-        console.log(`Dossier Cloudinary créé: ${eventFolder}`);
-      } catch (folderError) {
-        console.error(
-          "Erreur lors de la création du dossier Cloudinary:",
-          folderError
-        );
-        // On continue même si la création du dossier échoue
       }
 
       // On ajoute le cadeau à la liste
