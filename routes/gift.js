@@ -566,22 +566,25 @@ router.delete(
 
 // Déclarer s'occuper d'un cadeau
 router.put(
-  "/:id/wish-list/:giftId/purchase",
+  "/:id/wish-list/:participantUserId/:giftId/purchase",
   isAuthenticated,
   isParticipant,
   async (req, res) => {
     try {
-      const { event, participation } = req;
+      const { event } = req;
       // Si ce n'est pas une Liste de Noël, il n'y a pas de liste de souhaits
       if (Event.TYPES.christmas_list !== event.event_type) {
         return res.status(400).json({
           message:
-            "Seuls les évènements Liste de Noël et Secret Santa ont des listes de souhaits",
+            "Seuls les évènements Liste de Noël ont des listes de souhaits",
         });
       }
 
-      const { giftId } = req.params;
-
+      const { participantUserId, giftId } = req.params;
+      const participation = event.event_participants.find((eventParticipant) =>
+        eventParticipant.user?._id.equals(participantUserId)
+      );
+      console.log(participantUserId, giftId, participation.wishList);
       // On cherche le cadeau dans la liste
       const gift = participation.wishList?.find((gift) =>
         gift._id.equals(giftId)

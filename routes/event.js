@@ -588,8 +588,14 @@ router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
+    // On effectue le tirage au sort uniquement sur les participants qui ont accepté
+    const participants = event.event_participants.filter(
+      (eventParticipant) =>
+        Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
+    );
+
     // S'il n'y a que 2 participants il n'y a pas besoin de tirage
-    if (2 > event.event_participants.length) {
+    if (2 > participants.length) {
       return res.status(400).json({
         message: "Il faut au moins 2 participants pour faire un tirage",
       });
@@ -602,13 +608,7 @@ router.post("/:id/draw", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // On effectue le tirage au sort uniquement sur les participants qui ont accepté
-    drawParticipants(
-      event.event_participants.filter(
-        (eventParticipant) =>
-          Event.PARTICIPANT_STATUSES.accepted === eventParticipant.status
-      )
-    );
+    drawParticipants(participants);
     event.drawnAt = new Date();
 
     await event.save();
