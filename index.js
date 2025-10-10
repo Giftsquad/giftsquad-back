@@ -1,3 +1,4 @@
+const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
@@ -6,6 +7,13 @@ const cloudinary = require("cloudinary").v2;
 
 const app = express();
 app.use(express.json());
+
+// CORS
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 mongoose.connect(process.env.MONGODB_URI);
 
