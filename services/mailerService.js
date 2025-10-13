@@ -50,7 +50,7 @@ const sendInvitationEmail = (event, email, user) => {
 
   const html = `
   <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 30px;">
-    <div style="max-width: 600px; background: white; margin: auto; border-radius: 8px; padding: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+    <div style="background: white; margin: auto; border-radius: 8px; padding: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
       
       <div style="text-align:center; margin-bottom: 25px;">
         <img src="${logoUrl}" alt="Logo Giftsquad" style="max-width: 140px; height: auto;" />
@@ -67,8 +67,8 @@ const sendInvitationEmail = (event, email, user) => {
         hasAccount
           ? `
         <div style="text-align:center; margin: 30px 0;">
-          <a href="${acceptLink}" style="background-color:#4CAF50;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">✅ Accepter</a>
-          <a href="${declineLink}" style="background-color:#f44336;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">❌ Refuser</a>
+          <a href="${acceptLink}" style="background-color:#4CAF50;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">Accepter</a>
+          <a href="${declineLink}" style="background-color:#f44336;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">Refuser</a>
         </div>
         `
           : `
