@@ -1,28 +1,5 @@
 const nodemailer = require("nodemailer");
 
-// const transporter = nodemailer.createTransport({
-//   service: "gmail",
-//   auth: {
-//     type: "OAuth2",
-//     user: "giftsquad758@gmail.com",
-//     clientId: process.env.GOOGLE_CLIENT_ID,
-//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-//   },
-// });
-
-// const sendMail = (to, subject, text, html) => {
-//   (async () => {
-//     await transporter.sendMail({
-//       from: "Giftsquad <giftsquad758@gmail.com>",
-//       to,
-//       subject,
-//       text,
-//       html,
-//     });
-//   })();
-// };
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -51,107 +28,88 @@ const sendInvitationEmail = (event, email, user) => {
     ? `"${user.firstname} ${user.lastname}" <${user.email}>`
     : email;
 
-  const subject = `Invitation à ${event.event_name}`;
-
-  // Liens pour accepter et décliner l'invitation (directement vers le backend)
-  const baseUrl = process.env.APP_URL;
-  const acceptLink = `${baseUrl}/event/${
-    event._id
-  }/participant/accept?email=${encodeURIComponent(email)}`;
-  const declineLink = `${baseUrl}/event/${
-    event._id
-  }/participant/decline?email=${encodeURIComponent(email)}`;
-
-  // Message différent selon si l'utilisateur a un compte ou non
+  const subject = `🎁 Invitation à ${event.event_name}`;
   const hasAccount = !!user;
+  const baseUrl = process.env.APP_URL;
+
+  const acceptLink = `${baseUrl}/event/${event._id}/participant/accept?email=${encodeURIComponent(email)}`;
+  const declineLink = `${baseUrl}/event/${event._id}/participant/decline?email=${encodeURIComponent(email)}`;
 
   const eventTypeMapping = {
     secret_santa: "Secret Santa",
-    birthday: "Birthday",
-    christmas_list: "Christmas List",
+    birthday: "Anniversaire",
+    christmas_list: "Liste de Noël",
   };
 
-  const html = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h2 style="color: #4CAF50; text-align: center;">Invitation à ${
-    event.event_name
-  }</h2>
-  
-  <p>Bonjour ${user ? user.firstname : email.split("@")[0]},</p>
-  
-  <p>Vous avez reçu une invitation à l'événement <strong>${
-    event.event_name
-  }</strong> qui aura lieu le ${new Date(event.event_date).toLocaleDateString(
-    "fr-FR"
-  )}.</p>
-  
-  <p><strong>Type d'événement :</strong>
-  ${eventTypeMapping[event.event_type] ?? "Inconnu"}</p>
-  ${
-    event.event_budget
-      ? `<p><strong>Budget conseillé :</strong> ${event.event_budget}€</p>`
-      : ""
-  }
-  
-  ${
-    hasAccount
-      ? `
-  <div style="text-align: center; margin: 30px 0;">
-    <a href="${acceptLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">✅ Accepter l'invitation</a>
-    
-    <a href="${declineLink}" style="background-color: #f44336; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 0 10px; display: inline-block; font-weight: bold;">❌ Décliner l'invitation</a>
-  </div>
-  `
-      : `
-  <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
-    <p style="margin: 0; color: #856404;"><strong>⚠️ Important :</strong> Vous n'avez pas encore de compte sur Giftsquad.</p>
-    <p style="margin: 10px 0 0 0; color: #856404;">Pour accepter cette invitation, vous devez d'abord :</p>
-    <ol style="margin: 10px 0 0 0; color: #856404;">
-      <li>Créer un compte sur l'application Giftsquad</li>
-      <li>Puis accepter l'invitation depuis la section "Invitations" de l'application</li>
-    </ol>
-  </div>
-  
-  <div style="text-align: center; margin: 30px 0;">
-    <p style="color: #666; font-size: 14px;">Une fois votre compte créé, vous pourrez accepter cette invitation directement dans l'application.</p>
-  </div>
-  `
-  }
-</div>
-`;
+  const eventType = eventTypeMapping[event.event_type] ?? "Événement";
+  const date = new Date(event.event_date).toLocaleDateString("fr-FR");
+  const budget = event.event_budget ? `<p><strong>Budget conseillé :</strong> ${event.event_budget} €</p>` : "";
 
-  // text = Fallback pour les clients email basiques ou quand HTML est désactivé
+  // URL du logo Cloudinary
+  const logoUrl = "https://res.cloudinary.com/dertejtfm/image/upload/v1760355211/Giftsquad_logo_vjs7kf.png";
+
+  const html = `
+  <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 30px;">
+    <div style="max-width: 600px; background: white; margin: auto; border-radius: 8px; padding: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      
+      <div style="text-align:center; margin-bottom: 25px;">
+        <img src="${logoUrl}" alt="Logo Giftsquad" style="max-width: 140px; height: auto;" />
+      </div>
+
+      <h2 style="color: #4CAF50; text-align: center; margin-bottom: 20px;">Invitation à ${event.event_name}</h2>
+
+      <p>Bonjour ${email.split("@")[0]},</p>
+
+      <p>Vous êtes invité(e) à participer à <strong>${event.event_name}</strong> (${eventType}), prévu le <strong>${date}</strong>.</p>
+      ${budget}
+
+      ${
+        hasAccount
+          ? `
+        <div style="text-align:center; margin: 30px 0;">
+          <a href="${acceptLink}" style="background-color:#4CAF50;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">✅ Accepter</a>
+          <a href="${declineLink}" style="background-color:#f44336;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px;">❌ Refuser</a>
+        </div>
+        `
+          : `
+        <div style="background:#fff3cd;border:1px solid #ffeeba;border-radius:6px;padding:15px;margin:25px 0;">
+          <p style="margin:0;color:#856404;"><strong>⚠️ Vous n'avez pas encore de compte Giftsquad.</strong></p>
+          <p>Pour accepter cette invitation :</p>
+          <ol style="margin:10px 0 0 20px;color:#856404;">
+            <li>Créez un compte sur l’application Giftsquad</li>
+            <li>Rendez-vous dans la section <em>“Invitations”</em> pour confirmer votre participation</li>
+          </ol>
+        </div>
+        `
+      }
+
+      <p style="font-size:12px;color:#999;text-align:center;margin-top:40px;">
+        Cet email a été envoyé automatiquement par Giftsquad. Ne répondez pas directement à ce message.
+      </p>
+    </div>
+  </div>
+  `;
+
   const text = `
 Invitation à ${event.event_name}
 
-Bonjour ${user ? user.firstname : email.split("@")[0]},
+<p>Bonjour ${email.split("@")[0]},</p>,
 
-Vous avez reçu une invitation à l'événement ${
-    event.event_name
-  } qui aura lieu le ${new Date(event.event_date).toLocaleDateString("fr-FR")}.
-
-Type d'événement : ${eventTypeMapping[event.event_type] ?? "Inconnu"}
-${event.event_budget ? `Budget conseillé : ${event.event_budget}€` : ""}
+Vous êtes invité(e) à l’événement "${event.event_name}" (${eventType}), prévu le ${date}.
+${event.event_budget ? `Budget conseillé : ${event.event_budget} €` : ""}
 
 ${
   hasAccount
     ? `
-Pour accepter l'invitation, cliquez sur ce lien :
-${acceptLink}
-
-Pour décliner l'invitation, cliquez sur ce lien :
-${declineLink}
+Accepter : ${acceptLink}
+Refuser : ${declineLink}
 `
     : `
-IMPORTANT : Vous n'avez pas encore de compte sur Giftsquad.
-
-Pour accepter cette invitation, vous devez d'abord :
-1. Créer un compte sur l'application Giftsquad
-2. Puis accepter l'invitation depuis la section "Invitations" de l'application
-
-Une fois votre compte créé, vous pourrez accepter cette invitation directement dans l'application.
+Vous devez d'abord créer un compte sur l'application Giftsquad,
+puis accepter l'invitation depuis la section "Invitations".
 `
-}`;
+}
+`;
 
   sendMail(to, subject, text, html);
 };
