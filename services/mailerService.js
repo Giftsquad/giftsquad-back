@@ -1,26 +1,49 @@
 const nodemailer = require("nodemailer");
 
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     type: "OAuth2",
+//     user: "giftsquad758@gmail.com",
+//     clientId: process.env.GOOGLE_CLIENT_ID,
+//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//     refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+//   },
+// });
+
+// const sendMail = (to, subject, text, html) => {
+//   (async () => {
+//     await transporter.sendMail({
+//       from: "Giftsquad <giftsquad758@gmail.com>",
+//       to,
+//       subject,
+//       text,
+//       html,
+//     });
+//   })();
+// };
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    type: "OAuth2",
-    user: "giftsquad758@gmail.com",
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
   },
 });
 
-const sendMail = (to, subject, text, html) => {
-  (async () => {
+const sendMail = async (to, subject, text, html) => {
+  try {
     await transporter.sendMail({
-      from: "Giftsquad <giftsquad758@gmail.com>",
+      from: `Giftsquad <${process.env.MAIL_USER}>`,
       to,
       subject,
       text,
       html,
     });
-  })();
+    console.log(`Email envoyé à ${to}`);
+  } catch (error) {
+    console.error("Erreur lors de l’envoi d’email :", error);
+  }
 };
 
 const sendInvitationEmail = (event, email, user) => {
